@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Jogos & Simuladores Industriais</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            900: '#0c4a6e',
+                        },
+                        dark: {
+                            bg: '#0f172a',
+                            card: '#1e293b',
+                            border: '#334155'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -5px rgba(14, 165, 233, 0.25);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans">
+
+    <!-- Header -->
+    <header class="bg-dark-card border-b border-dark-border sticky top-0 z-50 backdrop-blur-md bg-opacity-90">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-3 bg-brand-500/20 text-brand-500 rounded-xl border border-brand-500/30">
+                    <i class="fa-solid fa-gears text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
+                        Portal de Jogos & Simuladores
+                    </h1>
+                    <p class="text-xs text-slate-400">Plataforma de Treinamento Técnico e Industrial</p>
+                </div>
+            </div>
+
+            <!-- Stats Badge -->
+            <div class="flex items-center gap-2 bg-slate-800/80 px-4 py-2 rounded-lg border border-dark-border text-sm">
+                <i class="fa-solid fa-gamepad text-brand-500"></i>
+                <span class="text-slate-300">Total de Aplicações:</span>
+                <span id="game-count" class="font-mono font-bold text-cyan-400">32</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero / Controls -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        <!-- Search and Filter Bar -->
+        <div class="bg-dark-card p-6 rounded-2xl border border-dark-border shadow-xl mb-8">
+            <div class="flex flex-col md:flex-row gap-4 justify-between items-center">
+                <!-- Search Input -->
+                <div class="relative w-full md:w-96">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="searchInput" onkeyup="filterGames()" placeholder="Buscar por título, tag ou código..." 
+                           class="w-full pl-11 pr-4 py-2.5 bg-slate-900 border border-dark-border rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all text-sm">
+                </div>
+
+                <!-- Filter Categories -->
+                <div class="flex flex-wrap gap-2 w-full md:w-auto justify-start md:justify-end" id="filterContainer">
+                    <button onclick="setFilter('all')" class="filter-btn active-filter px-4 py-2 rounded-xl text-xs font-semibold border transition-all bg-brand-500 text-white border-brand-500">
+                        Todos
+                    </button>
+                    <button onclick="setFilter('gt')" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold border transition-all bg-slate-800 text-slate-300 border-dark-border hover:bg-slate-700">
+                        Manutenção & CNC
+                    </button>
+                    <button onclick="setFilter('qual')" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold border transition-all bg-slate-800 text-slate-300 border-dark-border hover:bg-slate-700">
+                        Qualidade & CEP
+                    </button>
+                    <button onclick="setFilter('gestao')" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold border transition-all bg-slate-800 text-slate-300 border-dark-border hover:bg-slate-700">
+                        Gestão & Leilão
+                    </button>
+                    <button onclick="setFilter('pnm')" class="filter-btn px-4 py-2 rounded-xl text-xs font-semibold border transition-all bg-slate-800 text-slate-300 border-dark-border hover:bg-slate-700">
+                        Pneumática
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Games Grid -->
+        <div id="gamesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Os cards serão renderizados dinamicamente via JS -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="noResults" class="hidden text-center py-16">
+            <i class="fa-solid fa-ghost text-5xl text-slate-600 mb-4"></i>
+            <h3 class="text-lg font-semibold text-slate-400">Nenhum simulador encontrado</h3>
+            <p class="text-sm text-slate-500">Tente ajustar seus termos de pesquisa ou filtros.</p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="mt-auto bg-dark-card border-t border-dark-border py-6 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4">
+            <p>Plataforma de Treinamento Industrial & Educational Simulators — Atividades Técnicas SENAI / Indústria 4.0</p>
+            <p class="mt-1">Hospedado via GitHub Pages</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript Data & Logic -->
+    <script>
+        const gamesData = [
+            // GESTAO
+            { id: 1, file: "GESTAO-Game_Leiloeiro_Digital_Rede_avancado_2.html", category: "gestao", tag: "Gestão", title: "O Leilão do Tempo", desc: "Simulador de gestão de tempo, custo de oportunidade e tomada de decisão estratégica sob restrição de recursos. Modos Tradicional, Cego e Holandês com P2P." },
+            { id: 2, file: "GESTAO-Game_Leiloeiro_Digital_Rede_avancado.html", category: "gestao", tag: "Gestão", title: "Leiloeiro Digital Avançado", desc: "Plataforma de leilão interativo em rede P2P para negociação de recursos, priorização e dinâmicas de mercado para formação em gestão." },
+            { id: 3, file: "GESTAO-Game_Leiloeiro_Digital_Rede.html", category: "gestao", tag: "Gestão", title: "Leiloeiro Digital (Base)", desc: "Versão base da dinâmica de leilão em rede para tomada de decisão estratégica e economia comportamental." },
+            { id: 4, file: "GESTAO-Game_Leiloeiro_Digital.html", category: "gestao", tag: "Gestão", title: "Leiloeiro Digital Singleplayer", desc: "Simulador solo de tomada de decisões rápidas em alocação de tempo e recursos com mecânica de ofertas." },
+
+            // GT (Manutenção, CAD/CAM, CNC, Mecânica)
+            { id: 5, file: "GT-Desafio_Maker_Simulado_2.html", category: "gt", tag: "Manutenção", title: "Desafio Maker: CAD/CAM ao Chão de Fábrica", desc: "Tabuleiro dinâmico sobre fabricação mecânica, código G/M para CNC, metrologia e Lean Manufacturing. Modos solo e multiplayer P2P." },
+            { id: 6, file: "GT-Desafio_Maker_Simulado.html", category: "gt", tag: "Manutenção", title: "Desafio Maker Simulado", desc: "Simulação interativa abordando a jornada maker do projeto em CAD/CAM até a usinagem técnica no chão de fábrica." },
+            { id: 7, file: "GT-EXPERT_EM_MANUTENCAO_v3_P2P_2.html", category: "gt", tag: "Manutenção", title: "Expert em Manutenção v3 (P2P)", desc: "Jogo de tabuleiro com 50 casas e 50 questões técnicas cobrindo redutores, transmissões mecânicas e motores elétricos." },
+            { id: 8, file: "GT-EXPERT_EM_MANUTENCAO_v3_P2P.html", category: "gt", tag: "Manutenção", title: "Expert em Manutenção P2P (v3.0)", desc: "Sincronização multiplayer em tempo real via PeerJS com banco de questões sobre manutenção preditiva e corretiva." },
+            { id: 9, file: "GT-Expert_Manutenção-Redut_Motores_2.html", category: "gt", tag: "Manutenção", title: "Expert em Manutenção: Redutores e Motores", desc: "Simulador de engenharia focado em falhas tribológicas, alinhamento, normas ISO, LOTO e acionamentos elétricos." },
+            { id: 10, file: "GT-Expert_Manutenção-Redut_Motores.html", category: "gt", tag: "Manutenção", title: "Expert em Manutenção: Transmissões", desc: "Atividade interativa para diagnósticos de falhas mecânicas, lubrificação de engrenagens e motores industriais." },
+            { id: 11, file: "GT-Jogo_Roleta_Tribologia.html", category: "gt", tag: "Manutenção", title: "Roleta da Tribologia", desc: "Jogo interativo no estilo roleta técnica para estudo de atrito, desgaste, viscosidade de óleos e lubrificação industrial." },
+            { id: 12, file: "GT-Jogo_Super_Trunfo_Elementos_Maquinas.html", category: "gt", tag: "Manutenção", title: "Super Trunfo: Elementos de Máquinas", desc: "Jogo de cartas comparativo avaliando torque, resistência, taxa de falha e aplicações de elementos mecânicos." },
+            { id: 13, file: "GT-JOGO_MEMORIA_LUBRIFICACAO.html", category: "gt", tag: "Manutenção", title: "Jogo da Memória: Lubrificação", desc: "Atividade de associação entre tipos de lubrificantes, graxas, viscosidades e suas respetivas aplicações industriais." },
+            { id: 14, file: "GT-JOGO_MEMORIA_MECANICA_LUB.html", category: "gt", tag: "Manutenção", title: "Jogo da Memória: Mecânica e Lubrificação", desc: "Desafio visual e conceitual cobrindo componentes mecânicos e boas práticas de manutenção lubrificante." },
+            { id: 15, file: "GT-JOGO_MEMORIA_MECANICA.html", category: "gt", tag: "Manutenção", title: "Jogo da Memória: Elementos Mecânicos", desc: "Emparelhamento de peças, chavetas, rolamentos, acoplamentos e engrenagens industriais." },
+            { id: 16, file: "GT-JOGO_MEMORIA_REDUTORES.html", category: "gt", tag: "Manutenção", title: "Jogo da Memória: Redutores de Velocidade", desc: "Identificação e associação de engrenagens planetárias, sem-fim, eixos paralelos e razões de redução." },
+            { id: 17, file: "GT-Jogo_P2P_Expert_em_Manutenção.html", category: "gt", tag: "Manutenção", title: "Expert em Manutenção P2P Original", desc: "Primeira versão em rede da trilha de conhecimentos em engenharia e técnicas de manutenção de fábrica." },
+
+            // QUAL (Qualidade, CEP, Processos)
+            { id: 18, file: "QUAL-Game_Corrida_CEP_Rede_Avancado_2.html", category: "qual", tag: "Qualidade", title: "Corrida do CEP Avançado (Rede)", desc: "Simulador de Controle Estatístico do Processo com cartas de tolerância, desvio padrão ($C_p / C_{pk}$) e gráficos de controle." },
+            { id: 19, file: "QUAL-Game_Corrida_CEP_Rede_Avancado.html", category: "qual", tag: "Qualidade", title: "Corrida do CEP com Sincronização P2P", desc: "Competição interativa sobre limites de controle, variabilidade de lote e causas especiais/comuns na linha de produção." },
+            { id: 20, file: "QUAL-Game_Corrida_CEP_Rede.html", category: "qual", tag: "Qualidade", title: "Corrida do CEP (Rede Básica)", desc: "Jogo de tabuleiro focado na gestão da qualidade e resolução de problemas estatísticos em ambiente P2P." },
+            { id: 21, file: "QUAL-Game_Corrida_CEP.html", category: "qual", tag: "Qualidade", title: "Corrida do CEP Solo", desc: "Modo individual para teste de conhecimentos em amostragem, gráficos de média/amplitudes e ferramentas da qualidade." },
+            { id: 22, file: "QUAL-Jogo_Memoria_Ferramentas_Qualidade_SENAI.html", category: "qual", tag: "Qualidade", title: "Memória: Ferramentas da Qualidade", desc: "Atividade de associação cobrindo Ishikawa, 5W2H, Pareto, Histograma, Poka-Yoke e FMEA." },
+            { id: 23, file: "QUAL-Jogo_Memoria_Ferramentas_Qualidade.html", category: "qual", tag: "Qualidade", title: "Jogo da Memória: Gestão da Qualidade", desc: "Associação prática dos conceitos de garantia da qualidade e melhoria contínua (KAIZEN/PDCA)." },
+            { id: 24, file: "QUAL-Jogo_P2P_Corrida_do_CEP.html", category: "qual", tag: "Qualidade", title: "Jogo P2P Corrida do CEP", desc: "Versão clássica multiplayer para teste de velocidade e exatidão em conceitos de controle de processos." },
+
+            // PNM / SISMEC (Pneumática e Automação)
+            { id: 25, file: "PNM-JOGO_MEMORIA_PNM_2P.html", category: "pnm", tag: "Pneumática", title: "Jogo da Memória: Pneumática 2P", desc: "Módulo interativo de símbolos normatizados ISO 1219 e componentes de circuitos pneumáticos." },
+            { id: 26, file: "SISMEC-JOGO_MEMORIA_PNM_2P_2.html", category: "pnm", tag: "Pneumática", title: "Jogo da Memória: Pneumática SENAI v2", desc: "Emparelhamento de atuadores, válvulas direcionais, unidades FRL e aplicações práticas na automação industrial." },
+            { id: 27, file: "SISMEC-JOGO_MEMORIA_PNM_2P.html", category: "pnm", tag: "Pneumática", title: "Jogo da Memória: Pneumática SENAI", desc: "Treinamento de simbologia pneumática e componentes de comando e atuadores elétricos/pneumáticos." },
+            { id: 28, file: "SISMEC-JOGO_MEMORIA_PNM.html", category: "pnm", tag: "Pneumática", title: "Memória Pneumática Simples", desc: "Visualizador e jogo de fixação de conceitos pneumáticos industriais para formação de operadores e técnicos." },
+
+            // OUTROS
+            { id: 29, file: "JOGO_MEMORIA_SENAI.html", category: "gt", tag: "Geral", title: "Jogo da Memória SENAI", desc: "Jogo da memória generalista cobrindo conceitos técnicos de manufatura, segurança do trabalho e ferramentas." },
+            { id: 30, file: "Jogo_Memoria_Qualidade.html", category: "qual", tag: "Qualidade", title: "Jogo da Memória da Qualidade", desc: "Desafio visual focado no controle de defeitos, padronização e normas técnicas industriais." },
+            { id: 31, file: "Jogo_Roleta_Tribologia.html", category: "gt", tag: "Manutenção", title: "Roleta Tribologia (Edição Solo)", desc: "Ferramenta pedagógica de perguntas e respostas sobre redução de atrito e aumento da vida útil de máquinas." },
+            { id: 32, file: "Super_Trunfo_Elementos_Maquinas.html", category: "gt", tag: "Manutenção", title: "Super Trunfo: Peças e Componentes", desc: "Jogo de cartas com atributos técnicos de parafusos, rolamentos, chavetas e acoplamentos." }
+        ];
+
+        let currentFilter = 'all';
+
+        function renderGames(games) {
+            const grid = document.getElementById('gamesGrid');
+            const noResults = document.getElementById('noResults');
+            grid.innerHTML = '';
+
+            if (games.length === 0) {
+                noResults.classList.remove('hidden');
+                return;
+            } else {
+                noResults.classList.add('hidden');
+            }
+
+            games.forEach(game => {
+                let categoryBadgeColor = 'bg-blue-500/10 text-blue-400 border-blue-500/30';
+                if (game.category === 'qual') categoryBadgeColor = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+                if (game.category === 'gestao') categoryBadgeColor = 'bg-purple-500/10 text-purple-400 border-purple-500/30';
+                if (game.category === 'pnm') categoryBadgeColor = 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+
+                const card = document.createElement('div');
+                card.className = 'bg-dark-card rounded-2xl border border-dark-border p-5 flex flex-col justify-between card-hover';
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between gap-2 mb-3">
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded-lg border ${categoryBadgeColor}">
+                                ${game.tag}
+                            </span>
+                            <span class="text-[10px] font-mono text-slate-500 truncate max-w-[150px]" title="${game.file}">
+                                ${game.file}
+                            </span>
+                        </div>
+                        <h3 class="text-base font-bold text-slate-100 mb-2 hover:text-brand-500 transition-colors">
+                            ${game.title}
+                        </h3>
+                        <p class="text-xs text-slate-400 line-clamp-3 mb-4 leading-relaxed">
+                            ${game.desc}
+                        </p>
+                    </div>
+                    <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
+                        <a href="./${game.file}" class="w-full text-center py-2 px-4 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2 shadow-lg shadow-brand-500/20">
+                            <i class="fa-solid fa-play text-[10px]"></i> Abrir Aplicação
+                        </a>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            document.getElementById('game-count').innerText = games.length;
+        }
+
+        function filterGames() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = gamesData.filter(game => {
+                const matchesFilter = (currentFilter === 'all') || (game.category === currentFilter);
+                const matchesQuery = game.title.toLowerCase().includes(query) || 
+                                     game.desc.toLowerCase().includes(query) || 
+                                     game.file.toLowerCase().includes(query) ||
+                                     game.tag.toLowerCase().includes(query);
+                return matchesFilter && matchesQuery;
+            });
+            renderGames(filtered);
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            
+            // Update buttons styling
+            const buttons = document.querySelectorAll('.filter-btn');
+            buttons.forEach(btn => {
+                btn.classList.remove('bg-brand-500', 'text-white', 'border-brand-500');
+                btn.classList.add('bg-slate-800', 'text-slate-300', 'border-dark-border');
+            });
+
+            event.target.classList.remove('bg-slate-800', 'text-slate-300', 'border-dark-border');
+            event.target.classList.add('bg-brand-500', 'text-white', 'border-brand-500');
+
+            filterGames();
+        }
+
+        // Renderização inicial
+        document.addEventListener('DOMContentLoaded', () => {
+            renderGames(gamesData);
+        });
+    </script>
+</body>
+</html>

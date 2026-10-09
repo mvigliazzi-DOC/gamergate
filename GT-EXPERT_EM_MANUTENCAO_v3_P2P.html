@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expert em Manutenção — P2P Multiplayer v3</title>
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<style>
+:root{--bg:#0f172a;--panel:#1e293b;--panel2:#111827;--text:#f8fafc;--muted:#94a3b8;--accent:#38bdf8;--ok:#10b981;--bad:#ef4444;--warn:#f59e0b;--p1:#ef4444;--p2:#3b82f6;--p3:#10b981;--p4:#f59e0b;--p5:#8b5cf6;--p6:#f97316}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Segoe UI,Tahoma,sans-serif;padding:18px}
+h1,h2,p{margin-top:0}.wrap{max-width:1200px;margin:auto}.bar,.panel{background:var(--panel);border:1px solid #334155;border-radius:12px;padding:14px;margin-bottom:14px}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.grow{flex:1}.status{padding:6px 10px;border-radius:7px;background:#334155;font-weight:700}
+input,select,button{border-radius:7px;border:1px solid #475569;padding:9px 11px;background:#0f172a;color:#fff}
+button{cursor:pointer;border-color:var(--accent);font-weight:700}button:hover:not(:disabled){filter:brightness(1.15)}button:disabled{opacity:.45;cursor:not-allowed}.primary{background:var(--accent);color:#082f49}.danger{background:var(--bad);border-color:var(--bad)}.ok{background:var(--ok);border-color:var(--ok);color:#062e24}
+.grid{display:grid;grid-template-columns:1fr 310px;gap:14px}.board{display:grid;grid-template-columns:repeat(10,1fr);gap:5px;background:#020617;padding:9px;border-radius:12px}
+.tile{height:76px;background:var(--panel);border:2px solid #334155;border-radius:7px;padding:4px;display:flex;flex-direction:column;justify-content:space-between;align-items:center;position:relative}
+.tile.expert{border-color:#8b5cf6;background:#25183f}.tile.bonus{border-color:var(--ok);background:#064e3b}.tile.penalty{border-color:var(--bad);background:#7f1d1d}.num{font-size:.72rem;color:#94a3b8;align-self:flex-start}.tag{font-size:.62rem;text-align:center;font-weight:800}.pawns{display:flex;gap:3px;flex-wrap:wrap;justify-content:center}.pawn{width:16px;height:16px;border-radius:50%;border:2px solid #fff}.p1{background:var(--p1)}.p2{background:var(--p2)}.p3{background:var(--p3)}.p4{background:var(--p4)}.p5{background:var(--p5)}.p6{background:var(--p6)}
+.side{display:flex;flex-direction:column;gap:12px}.player{padding:10px;border:1px solid #334155;border-radius:8px;background:#111827}.player.active{outline:2px solid var(--accent)}.player small{color:var(--muted)}.log{height:180px;overflow:auto;background:#020617;border-radius:8px;padding:9px;font-size:.85rem}.log div{margin-bottom:6px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.82);display:none;align-items:center;justify-content:center;padding:15px;z-index:20}.modal.show{display:flex}.modalbox{max-width:820px;width:100%;background:var(--panel);border:2px solid var(--accent);border-radius:14px;padding:22px}.options{display:grid;gap:9px}.option{text-align:left}.feedback{font-size:1.1rem;font-weight:800;margin-top:12px}.explain{background:#0f172a;border-left:4px solid var(--accent);padding:12px;margin-top:12px;display:none}.roomcode{font-size:1.2rem;color:var(--warn);font-weight:900;letter-spacing:2px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.board{grid-template-columns:repeat(5,1fr)}.tile{height:68px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="bar">
+  <div class="grow"><h1>⚙️ EXPERT EM MANUTENÇÃO</h1><p>Multiplayer P2P — Host autoritativo e sincronização em tempo real</p></div>
+  <span id="status" class="status">Modo local</span>
+</header>
+
+<section class="bar">
+  <strong>Seu nome</strong><input id="name" value="Engenheiro 1" maxlength="30">
+  <button class="primary" id="hostBtn">🌐 Criar Sala</button>
+  <input id="room" placeholder="Código da sala" maxlength="5" style="text-transform:uppercase">
+  <button id="joinBtn">🔗 Entrar</button>
+  <span>Sala: <b id="roomCode" class="roomcode">—</b></span>
+</section>
+
+<section class="bar">
+  <label>Jogadores no Host:
+    <select id="numPlayers">
+      <option>1</option><option>2</option><option selected>4</option><option>5</option><option>6</option>
+    </select>
+  </label>
+  <button class="primary" id="rollBtn">🎲 Rolar Dado</button>
+  <button class="danger" id="resetBtn">🔄 Reiniciar</button>
+  <strong id="turn">Vez de: Engenheiro 1</strong>
+  <strong id="dice">Dado: —</strong>
+</section>
+
+<div class="grid">
+  <main>
+    <div id="board" class="board"></div>
+  </main>
+  <aside class="side">
+    <div class="panel"><h2>👥 Jogadores</h2><div id="players"></div></div>
+    <div class="panel"><h2>📡 Eventos P2P</h2><div id="log" class="log"></div></div>
+  </aside>
+</div>
+</div>
+
+<div id="questionModal" class="modal">
+  <div class="modalbox">
+    <div style="display:flex;justify-content:space-between;gap:10px">
+      <b id="qTopic"></b><b id="qDiff"></b>
+    </div>
+    <h2 id="qText">Pergunta</h2>
+    <div id="options" class="options"></div>
+    <div id="feedback" class="feedback"></div>
+    <div id="explain" class="explain"></div>
+    <div style="text-align:right;margin-top:15px"><button id="continueBtn" class="primary" style="display:none">Continuar</button></div>
+  </div>
+</div>
+
+<script>
+/* Banco original preservado da versão v2 fornecida pelo usuário. */
+const rawQuestionsDatabase = [
+
+            // FÁCIL (13 QUESTÕES)
+            { id: 1, topic: "Redutores e Transmissões", difficulty: "Fácil", question: "Qual tipo de redutor é amplamente reconhecido por proporcionar elevadas reduções em um único estágio, baixo nível de ruído e capacidade de auto-bloqueio (irreversibilidade)?", options: ["A) Redutor de engrenagens helicoidais.", "B) Redutor de coroa e rosca sem fim.", "C) Redutor planetário.", "D) Redutor de engrenagens cônicas."], answer: 1, explanation: "Possui alto escorregamento entre os dentes, proporcionando funcionamento silencioso, altas taxas de redução num só estágio e auto-bloqueio quando a hélice é < 5°." },
+            { id: 6, topic: "Redutores e Transmissões", difficulty: "Fácil", question: "De acordo com as normas de segurança (NR-10 e NR-12), qual a sequência correta para liberação de intervenção mecânica segura?", options: ["A) Bloqueio físico, seccionamento elétrico e sinalização.", "B) Seccionamento, verificação de ausência de tensão, aterramento/curto-circuito, bloqueio mecânico/elétrico e identificação (LOTO).", "C) Desligamento no botão de emergência e início imediato.", "D) Retirada da proteção e aviso verbal."], answer: 1, explanation: "O procedimento LOTO exige seccionamento, teste de ausência de energia, alívio de resíduos, bloqueio físico individual e etiqueta de identificação." },
+            { id: 9, topic: "Redutores e Transmissões", difficulty: "Fácil", question: "Qual é a função primordial do bujão de respiro instalado na parte superior da caixa de um redutor?", options: ["A) Permitir a entrada de ar frio para refrigerar.", "B) Equalizar a pressão interna gerada pela expansão térmica com a pressão atmosférica, evitando vazamento pelos retentores.", "C) Drenar condensação de água.", "D) Ponto de coleta automática de óleo."], answer: 1, explanation: "Com o aquecimento, o ar e o óleo expandem. O respiro permite a saída do ar aquecido, prevenindo sobrepressão interna que forçaria o óleo pelos retentores." },
+            { id: 14, topic: "Redutores e Transmissões", difficulty: "Fácil", question: "Qual tipo de desalinhamento ocorre quando as linhas de centro de dois eixos são paralelas, porém deslocadas vertical ou horizontalmente por uma distância 'd'?", options: ["A) Desalinhamento angular.", "B) Desalinhamento paralelo (radial).", "C) Desalinhamento torcional.", "D) Desalinhamento axial puro."], answer: 1, explanation: "O desalinhamento paralelo ocorre quando os eixos de rotação são paralelos entre si, mas deslocados de uma mesma linha de centro." },
+            { id: 15, topic: "Redutores e Transmissões", difficulty: "Fácil", question: "Qual é o principal motivo de utilizar acoplamentos elásticos (flexíveis) entre o motor e o redutor em vez de rígidos?", options: ["A) Eliminar a necessidade de chavetas.", "B) Aumentar a velocidade de rotação.", "C) Absorver pequenos desalinhamentos inevitáveis, amortecer choques mecânicos e isolar vibrações.", "D) Garantir a redução de rotação de 2:1."], answer: 2, explanation: "Elementos flexíveis acomodam pequenas imperfeições de alinhamento e amortecem picos de torque/choques de partida." },
+            { id: 23, topic: "Redutores e Transmissões", difficulty: "Fácil", question: "Ao inspecionar o óleo lubrificante drenado de um redutor, o técnico observa um aspecto leitoso/turvo (emulsionado). Isso indica contaminação por:", options: ["A) Partículas metálicas de bronze.", "B) Água.", "C) Sobreaquecimento por atrito seco.", "D) Mistura com graxa de silicone."], answer: 1, explanation: "A água misturada ao óleo forma uma emulsão instável de cor leitosa/turva, reduzindo a capacidade de carga e acelerando a corrosão." },
+            { id: 26, topic: "Motores Elétricos Industriais", difficulty: "Fácil", question: "Em um Motor Assíncrono Trifásico de Indução, a diferença relativa entre a velocidade do rotor e a velocidade síncrona do campo girante é denominada:", options: ["A) Fator de Serviço.", "B) Escorregamento (s).", "C) Rendimento nominal.", "D) Fator de Potência."], answer: 1, explanation: "O escorregamento s = (ns - n)/ns é indispensável para que haja indução de tensão e corrente nas barras do rotor, gerando torque." },
+            { id: 27, topic: "Motores Elétricos Industriais", difficulty: "Fácil", question: "Qual é a temperatura máxima limite suportada continuamente pela Classe de Isolamento F?", options: ["A) 105 °C", "B) 130 °C", "C) 155 °C", "D) 180 °C"], answer: 2, explanation: "Pelas normas NBR 7094/IEC 60034-1, os limites contínuos são: Classe A (105°C), B (130°C), F (155°C) e H (180°C)." },
+            { id: 31, topic: "Motores Elétricos Industriais", difficulty: "Fácil", question: "Qual a característica marcante do Motor de Passo (Step Motor)?", options: ["A) Opera exclusivamente acima de 10.000 rpm.", "B) Converte pulsos elétricos digitais em deslocamentos angulares discretos (passos) precisos em malha aberta.", "C) Exige escovas de carvão.", "D) Não possui torque de retenção."], answer: 1, explanation: "O motor de passo avança um ângulo fixo a cada pulso elétrico recebido, permitindo controle rigoroso de posição sem sensores de retorno." },
+            { id: 34, topic: "Motores Elétricos Industriais", difficulty: "Fácil", question: "O Grau de Proteção 'IP55' na placa do motor significa que ele possui:", options: ["A) Proteção contra submersão contínua a 10m.", "B) Proteção contra poeira nociva (IP5x) e jatos de água borrifados de qualquer direção (IPx5).", "C) Proteção contra explosão de hidrogênio.", "D) Isolamento até 55 kV."], answer: 1, explanation: "Na norma IEC 60529, o 1º dígito (5) é proteção contra poeira nociva e o 2º dígito (5) contra jatos d'água de qualquer direção." },
+            { id: 36, topic: "Motores Elétricos Industriais", difficulty: "Fácil", question: "O que indica a relação de corrente de partida Ip/In informada na placa do motor?", options: ["A) Quantas vezes a corrente de regime é maior que em vazio.", "B) O número de vezes que a corrente de partida com rotor bloqueado é maior que a corrente nominal.", "C) Porcentagem de perda Joule.", "D) Variação da corrente no fator de potência zero."], answer: 1, explanation: "Expressa a magnitude do pico de corrente elétrica na partida direta com o rotor parado em relação à nominal (geralmente de 6 a 8x)." },
+            { id: 43, topic: "Motores Elétricos Industriais", difficulty: "Fácil", question: "Qual o nível de rendimento mínimo obrigatório atualmente comercializado no Brasil para motores trifásicos?", options: ["A) IE1 (Padrão)", "B) IE2 (Aprimorado)", "C) IE3 (Premium)", "D) IE5 (Ultra-Super Premium)"], answer: 2, explanation: "Conforme a legislação brasileira (NBR 17094), os motores trifásicos fabricados e comercializados devem atender no mínimo ao padrão IE3." },
+            { id: 49, topic: "Motores Elétricos Industriais", difficulty: "Fácil", question: "Qual a definição da grandeza 'Regime de Serviço S1' para motores elétricos?", options: ["A) Operação por tempo limitado insuficiente para equilíbrio térmico.", "B) Operação contínua com carga constante por tempo suficiente para alcançar o equilíbrio térmico.", "C) Operação intermitente periódica.", "D) Variações aleatórias sob comando manual."], answer: 1, explanation: "O regime S1 indica funcionamento contínuo em carga constante até que o motor atinja o equilíbrio térmico estabilizado." },
+
+            // MÉDIO (23 QUESTÕES)
+            { id: 2, topic: "Redutores e Transmissões", difficulty: "Médio", question: "Qual a principal vantagem mecânica do dente helicoidal em comparação ao dente reto em redutores?", options: ["A) Eliminação de forças axiais.", "B) Menor custo e dispensa de lubrificação.", "C) Contato gradual entre dentes, resultando em maior capacidade de carga e menor ruído/vibração.", "D) Trabalho em eixos concorrentes de 90° sem usinagem."], answer: 2, explanation: "O engrenamento progressivo aumenta a razão de condução, distribuindo a carga de forma suave e diminuindo o ruído mecânico." },
+            { id: 4, topic: "Redutores e Transmissões", difficulty: "Médio", question: "Qual é a consequência direta do nível de óleo lubrificante estar muito acima da marca máxima especificada?", options: ["A) Melhora no arrefecimento e rendimento.", "B) Aumento do atrito por agitação, gerando superaquecimento, espuma e vazamento pelos retentores.", "C) Redução da cavitação.", "D) Trava imediata de rolamentos."], answer: 1, explanation: "O óleo excessivo é batido pelas engrenagens, gerando atrito fluido, elevação de temperatura, formação de espuma e sobrepressão nos vedadores." },
+            { id: 7, topic: "Redutores e Transmissões", difficulty: "Médio", question: "Dentes de engrenagens apresentando pequenas crateras por fadiga de contato na região primitiva sofrem de:", options: ["A) Scuffing (Gripagem).", "B) Pitting (Piteira por fadiga de contato).", "C) Corrosão por atrito.", "D) Abrasão externa."], answer: 1, explanation: "O pitting surge quando a tensão cíclica de contato excede o limite de fadiga, gerando microtrincas subsuperficiais e destacamento de metal." },
+            { id: 8, topic: "Redutores e Transmissões", difficulty: "Médio", question: "Qual a principal limitação funcional do sistema por polias e correias trapezoidais em 'V' em relação às engrenagens?", options: ["A) Incompatibilidade com alta rotação.", "B) Impossibilidade de eixos paralelos.", "C) Escorregamento elástico e deslizamento, impedindo uma relação de transmissão rigorosamente constante.", "D) Tolerância zero de alinhamento."], answer: 2, explanation: "Devido à flexibilidade do elastômero e ao atrito, ocorrem microescorregamentos que impedem sincronismo rígido a 100%." },
+            { id: 10, topic: "Redutores e Transmissões", difficulty: "Médio", question: "O Fator de Serviço (fs) na seleção de um redutor leva em consideração quais parâmetros principais?", options: ["A) Apenas a rotação do motor.", "B) O tipo de máquina acionada, horas de operação diária e severidade de choques/cargas.", "C) Diâmetro do eixo e cor da pintura.", "D) Tinta protetiva da carcaça."], answer: 1, explanation: "O fator fs compensa severidade de choques mecânicos, regime diário (ex: 8h vs 24h) e número de partidas/paradas por hora." },
+            { id: 11, topic: "Redutores e Transmissões", difficulty: "Médio", question: "Na montagem de retentores radiais (lip seal), qual cuidado fundamental deve ser tomado com a superfície do eixo?", options: ["A) Acabamento recartilhado.", "B) Dureza e rugosidade adequadas (Ra 0,2 a 0,6 µm) e ausência de riscos/cantos vivos na montagem.", "C) Lubrificação com graxa e areia abrasiva.", "D) Diâmetro 2mm maior que o nominal."], answer: 1, explanation: "A pista exige boa dureza (>45 HRC) e retificação fina (Ra 0,2-0,6 µm) para evitar desgaste precoce do lábio de borracha." },
+            { id: 12, topic: "Redutores e Transmissões", difficulty: "Médio", question: "O que representa o parâmetro mecânico denominado 'Backlash' em um conjunto de engrenagens?", options: ["A) A deflexão torcional máxima sob carga.", "B) A folga entre dentes acoplados para permitir a película lubrificante e compensar a dilatação térmica.", "C) O desgaste irreversível na face lateral.", "D) A velocidade limite antes da força centrífuga."], answer: 1, explanation: "A folga entre dentes evita o travamento expansivo com o aumento da temperatura e acomoda o fluxo do filme de óleo." },
+            { id: 13, topic: "Redutores e Transmissões", difficulty: "Médio", question: "Qual a diferença crítica entre óleos lubrificantes sintéticos e minerais em redutores industriais?", options: ["A) Sintéticos deterioram mais rápido com a temperatura.", "B) Sintéticos suportam maiores variações de temperatura, têm alta estabilidade à oxidação e maiores intervalos de troca.", "C) Minerais são obrigatórios em planetários.", "D) Sintéticos atacam todas as vedações."], answer: 1, explanation: "Óleos sintéticos possuem elevado Índice de Viscosidade e alta estabilidade térmica, durando de 3 a 5 vezes mais que o mineral." },
+            { id: 16, topic: "Redutores e Transmissões", difficulty: "Médio", question: "Qual a função do acoplamento hidráulico (hidrodinâmico) entre o motor e uma carga de alta inércia?", options: ["A) Substituir o óleo interno do redutor.", "B) Proporcionar partida suave sem rigidez mecânica, permitindo ao motor acelerar sob baixa carga antes de transmitir torque total.", "C) Multiplicar a rotação por 10.", "D) Atuar como freio por atrito."], answer: 1, explanation: "O torque é transmitido pelo movimento cinético do fluido, aliviando a corrente de partida do motor e amortecendo impactos." },
+            { id: 18, topic: "Redutores e Transmissões", difficulty: "Médio", question: "Por que utilizar engrenagens cônicas espirais em saídas em ângulo reto no lugar de cônicas de dentes retos?", options: ["A) Permite fabricação em plástico sem óleo.", "B) Proporciona engrenamento contínuo e suave, suportando maiores torques com operação muito mais silenciosa.", "C) Garante relação fixa de 1:1.", "D) Facilita o desacoplamento manual."], answer: 1, explanation: "Dentes retos engrenam de forma abrupta, gerando vibração. Dentes espirais entram gradualmente, elevando a suave capacidade de carga." },
+            { id: 20, topic: "Redutores e Transmissões", difficulty: "Médio", question: "A folga excessiva entre as laterais do rasgo de chaveta e o corpo da chaveta resulta em:", options: ["A) Melhora no alinhamento axial.", "B) Impactos alternados em partidas/reversões, ocasionando fadiga, deformação e fretting corrosion.", "C) Aumento da eficiência mecânica.", "D) Auto-centramento automático."], answer: 1, explanation: "A folga provoca choque mecânico no ponto de reversão/variação de torque, resultando em desgaste por atrito e ruptura da chaveta." },
+            { id: 21, topic: "Redutores e Transmissões", difficulty: "Médio", question: "Qual o procedimento correto para verificar o alinhamento de correias trapezoidais entre duas polias?", options: ["A) Verificação visual livre.", "B) Utilizar régua retificada ou alinhador laser encostado na face lateral das polias, garantindo 4 pontos de contato.", "C) Apertar correias até ficarem rígidas.", "D) Aplicar resina colante."], answer: 1, explanation: "A checagem nos 4 pontos garante paralelismo de eixos e coplanaridade das polias, evitando desgaste prematuro do canal." },
+            { id: 24, topic: "Redutores e Transmissões", difficulty: "Médio", question: "Qual o motivo do tratamento térmico de cementação e tempera ser amplamente usado em engrenagens de aço?", options: ["A) Deixar a engrenagem mole e dúctil.", "B) Garantir camada superficial muito dura (resistente a desgaste/pitting) mantendo o núcleo tenaz e dúctil (resistente a choques).", "C) Eliminar a necessidade de óleo.", "D) Reduzir o peso em 50%."], answer: 1, explanation: "A cementação enriquece de carbono a periferia (dureza elevada) e mantém o centro tenaz contra fraturas por impacto." },
+            { id: 28, topic: "Motores Elétricos Industriais", difficulty: "Médio", question: "O que indica o valor do Fator de Serviço FS = 1,15 gravado na placa de um motor de 10 cv?", options: ["A) O motor consome 15% menos energia.", "B) O motor pode operar continuamente com até 15% de sobrecarga (11,5 cv) sob condições normais.", "C) A corrente de partida é 1,15x a nominal.", "D) A velocidade aumenta 15% quando quente."], answer: 1, explanation: "Permite usar uma reserva operacional contínua até 11,5 cv sem exceder a margem térmica de segurança do isolamento." },
+            { id: 30, topic: "Motores Elétricos Industriais", difficulty: "Médio", question: "Qual o papel do capacitor de partida no motor monofásico de indução?", options: ["A) Filtrar harmônicos da rede.", "B) Provocar desfasamento elétrico (~90°) entre a corrente do enrolamento auxiliar e principal, criando campo girante.", "C) Elevar o fator de potência para a unidade.", "D) Substituir o interruptor centrífugo."], answer: 1, explanation: "O campo monofásico é apenas pulsante. O capacitor defasa a fase auxiliar, simulando duas fases para criar o torque de partida." },
+            { id: 32, topic: "Motores Elétricos Industriais", difficulty: "Médio", question: "Qual a vantagem da partida Estrela-Triângulo (Y-Δ) em relação à Partida Direta?", options: ["A) Aumento do torque de partida em 3x.", "B) Redução da corrente de pico de partida na linha para 1/3 (33%) do valor direto.", "C) Eliminação de chaves mecânicas.", "D) Correção de frequência para 120 Hz."], answer: 1, explanation: "Na ligação Estrela, a tensão na bobina cai por √3, reduzindo tanto a corrente da linha quanto o torque de partida a 33% do valor nominal." },
+            { id: 33, topic: "Motores Elétricos Industriais", difficulty: "Médio", question: "Qual o efeito imediato da redução do torque na partida Estrela-Triângulo?", options: ["A) O motor parte com velocidade dupla.", "B) O motor pode não conseguir vencer o torque de carga se for acionado sob carga pesada.", "C) Sobreaquecimento imediato.", "D) Fator de potência capacitivo."], answer: 1, explanation: "Como o torque reduz drasticamente a 1/3, a chave Y-Δ só deve ser empregada em acionamentos que partam em vazio ou com carga muito leve." },
+            { id: 37, topic: "Motores Elétricos Industriais", difficulty: "Médio", question: "Qual o princípio físico utilizado pela Chave Soft-Starter para controlar a partida do motor?", options: ["A) Alteração do número de polos estatóricos.", "B) Controle da tensão eficaz (Vrms) via ângulo de disparo de tiristores (SCRs) em ponte antiparalela.", "C) Variação contínua da frequência de 0 a 400 Hz.", "D) Inserção de reostatos hidráulicos."], answer: 1, explanation: "O corte de fase pelos SCRs ajusta suavemente o valor eficaz da tensão aplicada no motor, limitando correntes e choques mecânicos." },
+            { id: 38, topic: "Motores Elétricos Industriais", difficulty: "Médio", question: "Em um ensaio com Megômetro, uma Resistência de Isolamento muito baixa (< 1 MΩ) indica:", options: ["A) Excelente estado do verniz isolante.", "B) Presença de umidade, sujeira condutiva ou degradação do isolamento, com risco de curto-circuito para a carcaça.", "C) Pronto para operar em alta tensão.", "D) Ausência total de correntes de fuga."], answer: 1, explanation: "Resistências abaixo dos limites de segurança denunciam umidade ou contaminação dos enrolamentos, necessitando de secagem/revisão." },
+            { id: 39, topic: "Motores Elétricos Industriais", difficulty: "Médio", question: "Qual a função do Motor Dahlander na indústria?", options: ["A) Operar exclusivamente em Corrente Contínua.", "B) Proporcionar duas velocidades distintas com relação fixa de 1:2 trocando conexões de um único enrolamento.", "C) Garantir fator de potência 1,0.", "D) Eliminar rolamentos."], answer: 1, explanation: "O enrolamento especial permite reconectar bobinas externamente (ex: Triângulo/Dupla-Estrela) para dobrar ou alterar o número de polos." },
+            { id: 40, topic: "Motores Elétricos Industriais", difficulty: "Médio", question: "Para ligar um motor trifásico de 6 terminais (220V por bobina) numa rede de 380V, qual o fechamento correto?", options: ["A) Conexão em Triângulo.", "B) Conexão em Estrela (Y).", "C) Conexão em Duplo Triângulo.", "D) Conexão Série-Paralela Monofásica."], answer: 1, explanation: "Em Estrela (Y), a tensão na bobina é a tensão da linha dividida por √3. Assim, 380V / 1,732 = 220V por bobina." },
+            { id: 44, topic: "Motores Elétricos Industriais", difficulty: "Médio", question: "Como se comporta o Fator de Potência (cos φ) de um motor de indução operando em vazio comparado à carga nominal?", options: ["A) Muito menor em vazio (0,15 - 0,20) do que em carga nominal (0,80 - 0,90).", "B) Idêntico em ambos.", "C) Maior em vazio (~1,0).", "D) Negativo em vazio."], answer: 0, explanation: "Em vazio predomina a corrente reativa magnetizante (indutiva), baixando o cos φ. À medida que a carga entra, a corrente ativa cresce e eleva o fator." },
+            { id: 47, topic: "Motores Elétricos Industriais", difficulty: "Médio", question: "Qual componente desconecta o enrolamento auxiliar e capacitor em motores monofásicos ao atingir 75-80% da rotação?", options: ["A) Inversor de frequência.", "B) Chave/Interruptor centrífugo.", "C) Fusível NH.", "D) Transformador isolador."], answer: 1, explanation: "Contrapesos no eixo se abrem pela força centrífuga ao atingir ~80% da velocidade, desligando a fase de partida do circuito." },
+
+            // DIFÍCIL (14 QUESTÕES)
+            { id: 3, topic: "Redutores e Transmissões", difficulty: "Difícil", question: "Qual característica construtiva torna os redutores planetários preferenciais em servoacionamentos e robótica?", options: ["A) Elevado backlash e estrutura aberta.", "B) Distribuição de carga entre múltiplas satélites, resultando em alta densidade de torque e baixo backlash.", "C) Uso exclusivo de graxa e baixa eficiência.", "D) Rendimento inferior a 50%."], answer: 1, explanation: "A divisão do torque entre várias satélites acopladas garante máxima rigidez, alta densidade de torque e folga angular mínima." },
+            { id: 5, topic: "Redutores e Transmissões", difficulty: "Difícil", question: "Na montagem térmica por indução de um rolamento de aço, qual a temperatura máxima limite para evitar danos estruturais?", options: ["A) 80 °C", "B) 120 °C", "C) 180 °C", "D) 250 °C"], answer: 1, explanation: "Aquecimentos acima de 120°C desfazem a têmpera do aço cromo (revenimento indesejado), reduzindo a dureza e a vida útil do rolamento." },
+            { id: 17, topic: "Redutores e Transmissões", difficulty: "Difícil", question: "Picos elevados na Frequência de Engrenamento (GMF) e harmônicas no teste de vibração de redutores indicam:", options: ["A) Desbalanceamento no rotor do motor.", "B) Problemas de contato entre dentes (folga incorreta, desgaste ou excentricidade).", "C) Falha no isolamento do estator.", "D) Cavitação de fluido."], answer: 1, explanation: "A GMF (nº dentes x rotação) reflete o engrenamento. Alterações nos picos e bandas laterais denunciam desgaste e falhas nos dentes." },
+            { id: 19, topic: "Redutores e Transmissões", difficulty: "Difícil", question: "O fenômeno de 'Scuffing' (gripagem térmica) nos dentes das engrenagens é provocado por:", options: ["A) Contaminação do óleo por sílica.", "B) Ruptura do filme lubrificante por calor extremo instantâneo, gerando microsolda e rasgamento do material.", "C) Corrosão por acidez.", "D) Fading de lonas."], answer: 1, explanation: "Sob carga e velocidade elevadas, a temperatura no ponto de contato supera o limite crítico do lubrificante, soldando pontualmente o metal." },
+            { id: 22, topic: "Redutores e Transmissões", difficulty: "Difícil", question: "Por que NÃO aplicar graxa de lítio em redutores projetados originalmente para banho de óleo fluido ISO VG 220?", options: ["A) A graxa derrete a 30 °C.", "B) A graxa não flui para os pontos de engrenamento/rolamentos, gerando canalização e starvation (fome de óleo).", "C) O lítio dissolve o aço cementado.", "D) O torque torna-se nulo."], answer: 1, explanation: "Diferente do óleo que respinga por fluidez, a graxa é expulsa da zona de contato e fica presa nas paredes, deixando o engrenamento a seco." },
+            { id: 25, topic: "Redutores e Transmissões", difficulty: "Difícil", question: "No teste de vibração, como identificar o fenômeno de 'Pé Manco' (Soft Foot) na carcaça do redutor?", options: ["A) Mudança expressiva na vibração de 1X/2X rotação ao afrouxar individualmente os parafusos de fixação.", "B) Aquecimento súbito do rolamento cego.", "C) Disparo de velocidade angular.", "D) Inversão espontânea de rotação."], answer: 0, explanation: "Quando os apoios não estão coplanares, apertar a base deforma a estrutura. O afrouxamento individual alivia a torção e altera a vibração." },
+            { id: 29, topic: "Motores Elétricos Industriais", difficulty: "Difícil", question: "Qual o risco crítico de ligar um Motor CC com enrolamento SÉRIE totalmente em vazio (sem carga)?", options: ["A) Queima por baixo torque.", "B) O fluxo cai drasticamente com a redução da corrente, fazendo o motor disparar (rotações destrutivas por força centrífuga).", "C) Sentido de rotação oscilante.", "D) Inversão de comutação."], answer: 1, explanation: "Como o campo está em série com a armadura, a corrente cai em vazio. Sendo a rotação inversamente proporcional ao fluxo, o motor dispara." },
+            { id: 35, topic: "Motores Elétricos Industriais", difficulty: "Difícil", question: "Qual o risco térmico em acionar motores por Inversor de Frequência em baixas rotações (ex: < 20 Hz no modo V/f)?", options: ["A) Superaquecimento, pois o hélice do próprio eixo gira devagar e perde vento; exige-se ventilação forçada.", "B) Resfriamento excessivo.", "C) Aumento da velocidade síncrona.", "D) Perda do isolamento por CC."], answer: 0, explanation: "Nos motores autoventilados, a ventilação cai drasticamente em baixas Rpm. Requer-se um kit de ventilação forçada independente." },
+            { id: 41, topic: "Motores Elétricos Industriais", difficulty: "Difícil", question: "Qual o impacto do desequilíbrio de tensão nas fases da rede trifásica no motor de indução?", options: ["A) Nenhum efeito.", "B) Geração de sequência negativa, provocando correntes elevadas, aquecimento localizado severo e perda de rendimento.", "C) Fator de potência > 1.", "D) Escorregamento zero."], answer: 1, explanation: "Pequenos desequilíbrios na tensão geram campos opostos de sequência negativa que causam forte aquecimento e torque de frenagem." },
+            { id: 42, topic: "Motores Elétricos Industriais", difficulty: "Difícil", question: "Qual o problema em rolamentos alimentados por inversores com chaveamento elevado (dV/dt do PWM)?", options: ["A) Magnetização das esferas.", "B) Descargas elétricas pelo filme de graxa (Efeito EDM), causando ranhuramento por micro-arcos (fluting) nas pistas.", "C) Desidratação do aço.", "D) Expansão do retentor."], answer: 1, explanation: "Tensões capacitivas no eixo superam a rigidez da película lubrificante e provocam micro-arcos eletroerosivos (EDM), destruindo o rolamento." },
+            { id: 45, topic: "Motores Elétricos Industriais", difficulty: "Difícil", question: "Qual a diferença funcional básica entre um Servomotor e um Motor de Indução Trifásico comum?", options: ["A) Servomotor não utiliza eletricidade.", "B) Servomotor é projetado para controle em malha fechada, com baixíssima inércia, suporte a sobrecargas e encoders de alta resolução.", "C) Motor comum tem posicionamento sem freio.", "D) Servomotor só gira em velocidade fixa."], answer: 1, explanation: "Servomotores priorizam altíssima resposta dinâmica, baixa inércia e posicionamento preciso em malha fechada com encoder." },
+            { id: 46, topic: "Motores Elétricos Industriais", difficulty: "Difícil", question: "O efeito de 'Cablagem Longa' entre Inversor e Motor pode gerar picos de sobretensão nos terminais devido a:", options: ["A) Ressonância capacitiva e reflexão de ondas por descasamento de impedância na linha de transmissão.", "B) Perda do campo por aquecimento do cobre.", "C) Transformação em CC na caixa de ligação.", "D) Efeito Joule inverso."], answer: 0, explanation: "O rápido chaveamento dV/dt reflete a onda ao chegar nos terminais do motor por descasamento de impedância, podendo dobrar o pico de tensão." },
+            { id: 48, topic: "Motores Elétricos Industriais", difficulty: "Difícil", question: "Em um Motor CC tipo Shunt (em derivação), qual a sua característica principal de operação?", options: ["A) Rotação praticamente constante mesmo sob variações de carga mecânica no eixo.", "B) Risco iminente de disparo em vazio.", "C) Torque de partida nulo.", "D) Exigência de fonte trifásica."], answer: 0, explanation: "Como o enrolamento de campo é paralelo, o fluxo permanece constante, resultando em uma curva de velocidade muito rígida/estável sob carga." },
+            { id: 50, topic: "Motores Elétricos Industriais", difficulty: "Difícil", question: "Ao medir o Índice de Polarização (IP) com Megômetro em motores, calcula-se a razão entre:", options: ["A) A resistência de isolamento aos 10 minutos dividida pela resistência a 1 minuto (IP = R10min / R1min).", "B) Tensão de pico e corrente de placa.", "C) Resistência da fase R dividida por S e T.", "D) Elevação de temperatura e rotação síncrona."], answer: 0, explanation: "O Índice de Polarização (R10min/R1min) avalia a contaminação/umidade do isolamento elétrico. Valores > 2,0 indicam isolamento limpo e seco." }
+];
+
+const TOTAL=50;
+const BONUS=[8,18,28,38,45], PENALTY=[14,24,34,48];
+let peer=null, isHost=false, hostConn=null, connections=[];
+let clientId=crypto.randomUUID();
+let state=null, pendingRoll=false, currentQuestion=null, questionAnswered=false;
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+
+function log(msg){const d=document.createElement('div');d.textContent=msg;$('log').prepend(d)}
+function setStatus(t){$('status').textContent=t}
+function playerColor(i){return `p${i+1}`}
+
+function makeInitialState(){
+ const n=+$('numPlayers').value;
+ const names=Array.from({length:6},(_,i)=>i===0?$('name').value.trim()||'Engenheiro 1':`Engenheiro ${i+1}`);
+ return {version:3,players:Array.from({length:n},(_,i)=>({id:i,name:names[i],position:1,connected:i===0})),
+ currentPlayer:0,dice:0,phase:'roll',question:null,questionAnswered:false,winner:null,used:[],hostId:clientId};
+}
+
+function broadcast(payload){
+ connections=connections.filter(c=>c&&c.open);
+ for(const c of connections) try{c.send(payload)}catch(e){log('Falha ao enviar estado a um jogador.')}
+}
+function broadcastState(){broadcast({type:'STATE',state})}
+
+function render(){
+ if(!state)return;
+ $('turn').textContent=state.winner?`🏆 Vencedor: ${state.winner.name}`:`Vez de: ${state.players[state.currentPlayer]?.name||'—'}`;
+ $('dice').textContent=state.dice?`Dado: 🎲 ${state.dice}`:'Dado: —';
+ $('rollBtn').disabled=state.phase!=='roll'||!!state.winner||!isHost;
+ renderPlayers(); renderBoard();
+ if(state.question && !state.questionAnswered) showQuestion(state.question);
+ else if(!state.question) closeQuestion();
+}
+function renderPlayers(){
+ $('players').innerHTML=state.players.map((p,i)=>`<div class="player ${i===state.currentPlayer&&!state.winner?'active':''}">
+ <b><span class="pawn ${playerColor(i)}" style="display:inline-block;vertical-align:middle"></span> ${esc(p.name)}</b>
+ <br><small>Casa ${p.position} · ${p.connected?'🟢 conectado':'⚪ local/desconectado'}</small></div>`).join('');
+}
+function renderBoard(){
+ $('board').innerHTML='';
+ for(let i=1;i<=TOTAL;i++){
+  const d=document.createElement('div'); d.className='tile';
+  if(i>=42)d.classList.add('expert');
+  if(BONUS.includes(i))d.classList.add('bonus');
+  if(PENALTY.includes(i))d.classList.add('penalty');
+  let tag=i===1?'Início':i===TOTAL?'Chegada':i>=42?'EXPERT':'';
+  if(BONUS.includes(i))tag='+2 Bônus';
+  if(PENALTY.includes(i))tag='-3 Ônus';
+  d.innerHTML=`<span class="num">${i}</span><span class="tag">${tag}</span><div class="pawns"></div>`;
+  state.players.forEach((p,idx)=>{if(p.position===i){const x=document.createElement('span');x.className=`pawn ${playerColor(idx)}`;x.title=p.name;d.querySelector('.pawns').appendChild(x)}});
+  $('board').appendChild(d);
+ }
+}
+
+function pickQuestion(){
+ let diff=state.players[state.currentPlayer].position>=42?'Difícil':(Math.random()<.5?'Fácil':'Médio');
+ let pool=rawQuestionsDatabase.filter(q=>!state.used.includes(q.id)&&q.difficulty===diff);
+ if(!pool.length)pool=rawQuestionsDatabase.filter(q=>!state.used.includes(q.id));
+ if(!pool.length){state.used=[];pool=rawQuestionsDatabase.filter(q=>q.difficulty===diff)}
+ return pool[Math.floor(Math.random()*pool.length)];
+}
+
+function prepareQuestion(q){
+ const correct=q.options[q.answer];
+ const wrong=q.options.filter((_,i)=>i!==q.answer).sort(()=>Math.random()-.5);
+ const positions=[0,1,2,3].sort(()=>Math.random()-.5);
+ const opts=[];let wi=0;
+ for(let i=0;i<4;i++)opts.push(i===positions[0]?correct:wrong[wi++]);
+ const formatted=opts.map((x,i)=>`${'ABCD'[i]}) ${x.replace(/^[A-D]\)\s*/,'')}`);
+ return {...q,options:formatted,answer:positions[0]};
+}
+
+function hostRoll(){
+ if(!isHost||state.phase!=='roll'||state.winner)return;
+ const p=state.players[state.currentPlayer];
+ state.turnStart=p.position;
+ state.dice=Math.floor(Math.random()*6)+1;
+ let target=Math.min(TOTAL,p.position+state.dice);
+ if(BONUS.includes(target))target=Math.min(TOTAL,target+2);
+ else if(PENALTY.includes(target))target=Math.max(1,target-3);
+ p.position=target;
+ state.question=prepareQuestion(pickQuestion());
+ state.questionAnswered=false;
+ state.phase='question';
+ broadcastState();render();
+ log(`🎲 ${p.name} rolou ${state.dice} e foi para a casa ${target}.`);
+}
+
+function evaluate(idx){
+ if(!isHost||!state.question||state.questionAnswered)return;
+ const q=state.question,p=state.players[state.currentPlayer],start=p.position;
+ const correct=idx===q.answer;
+ state.questionAnswered=true;
+ state.used.push(q.id);
+ if(correct){
+   $('feedback').textContent='✓ Resposta correta! Você permanece na nova casa.';
+   $('feedback').style.color='var(--ok)';
+ }else{
+   // Regra da v2: na reta final recua 2; antes dela retorna ao início da jogada.
+   // Para manter a regra, guardamos a posição anterior no campo privado do estado.
+   p.position=state.turnStart;
+   if(state.turnStart>=42)p.position=Math.max(1,state.turnStart-2);
+   $('feedback').textContent='❌ Resposta incorreta! Você perdeu o avanço desta jogada.';
+   $('feedback').style.color='var(--bad)';
+ }
+ state.question.feedback=correct?'✓ Resposta correta!':'❌ Resposta incorreta!';
+ state.question.explanation=q.explanation;
+ if(correct&&p.position>=TOTAL) state.winner=p;
+ state.phase=state.winner?'finished':'questionDone';
+ broadcastState();render();showQuestion(state.question);
+}
+
+function showQuestion(q){
+ if(!q)return;
+ $('questionModal').classList.add('show');
+ $('qTopic').textContent=`Tema: ${q.topic}`;
+ $('qDiff').textContent=q.difficulty;
+ $('qText').textContent=q.question;
+ $('feedback').textContent=q.feedback||'';
+ $('explain').textContent=q.explanation?`Análise Técnica: ${q.explanation}`:'';
+ $('explain').style.display=q.explanation?'block':'none';
+ $('continueBtn').style.display=state.questionAnswered?'inline-block':'none';
+ const opts=$('options');opts.innerHTML='';
+ q.options.forEach((o,i)=>{const b=document.createElement('button');b.className='option';b.textContent=o;b.disabled=state.questionAnswered||!isHost;b.onclick=()=>evaluate(i);opts.appendChild(b)});
+}
+function closeQuestion(){$('questionModal').classList.remove('show')}
+
+$('continueBtn').onclick=()=>{
+ if(!isHost)return;
+ state.question=null;state.questionAnswered=false;
+ if(state.winner){broadcastState();render();return}
+ state.currentPlayer=(state.currentPlayer+1)%state.players.length;
+ state.phase='roll';state.dice=0;delete state.turnStart;
+ broadcastState();render();
+};
+
+$('rollBtn').onclick=()=>{if(isHost)hostRoll()};
+$('resetBtn').onclick=()=>{if(isHost){state=makeInitialState();broadcastState();render();log('🔄 Jogo reiniciado pelo Host.')}};
+$('numPlayers').onchange=()=>{if(isHost){state=makeInitialState();broadcastState();render()}};
+
+function startHost(){
+ if(peer){try{peer.destroy()}catch(e){}}
+ isHost=true;clientId=crypto.randomUUID();
+ const code=Math.random().toString(36).substring(2,7).toUpperCase();
+ peer=new Peer(`EXPERT-${code}`);
+ peer.on('open',()=>{$('roomCode').textContent=code;setStatus('🟢 Host Online');state=makeInitialState();render();log(`Sala ${code} criada. O Host controla o estado.`)});
+ peer.on('connection',conn=>{
+   connections.push(conn);
+   conn.on('open',()=>{
+     conn.send({type:'WELCOME',host:true,state});
+     log('👤 Novo jogador conectado.');
+   });
+   conn.on('data',data=>{
+     if(data?.type==='JOIN_REQUEST'){
+       // Convidados entram como jogadores 2..N. O Host é sempre o jogador 1.
+       if(state.players.length>=6)return conn.send({type:'ERROR',message:'Sala cheia.'});
+       const idx=state.players.findIndex(p=>!p.connected&&p.id!==0);
+       const playerIndex=idx>=0?idx:state.players.length;
+       if(playerIndex>=6)return;
+       const name=(data.name||`Engenheiro ${playerIndex+1}`).slice(0,30);
+       if(playerIndex===state.players.length)state.players.push({id:playerIndex,name,position:1,connected:true});
+       else{state.players[playerIndex].name=name;state.players[playerIndex].connected=true}
+       conn.playerIndex=playerIndex;conn.send({type:'ASSIGNED',playerIndex});
+       broadcastState();render();log(`🔗 ${name} entrou como Jogador ${playerIndex+1}.`);
+     }
+   });
+   conn.on('close',()=>{
+     if(conn.playerIndex!=null&&state?.players[conn.playerIndex]){state.players[conn.playerIndex].connected=false;broadcastState();render();log(`⚪ ${state.players[conn.playerIndex].name} desconectou.`)}
+   });
+ });
+ peer.on('error',e=>{setStatus('🔴 Erro P2P');log(`Erro PeerJS: ${e.type||e.message}`)});
+}
+
+function startJoin(){
+ const code=$('room').value.trim().toUpperCase();
+ if(!code)return alert('Informe o código da sala.');
+ if(peer){try{peer.destroy()}catch(e){}}
+ isHost=false;clientId=crypto.randomUUID();
+ peer=new Peer();
+ peer.on('open',()=>{
+   hostConn=peer.connect(`EXPERT-${code}`,{reliable:true});
+   hostConn.on('open',()=>{
+     setStatus('🟢 Conectado ao Host');hostConn.send({type:'JOIN_REQUEST',name:$('name').value.trim()||'Engenheiro'});
+     log('Conectado. Aguardando sincronização do Host...');
+   });
+   hostConn.on('data',data=>{
+     if(data.type==='STATE'){state=data.state;render()}
+     if(data.type==='WELCOME'){state=data.state;render()}
+     if(data.type==='ASSIGNED'){log(`Você é o Jogador ${data.playerIndex+1}.`)}
+     if(data.type==='ERROR')alert(data.message);
+   });
+   hostConn.on('close',()=>{setStatus('🔴 Desconectado do Host');log('Conexão com o Host encerrada.')});
+ });
+ peer.on('error',e=>{setStatus('🔴 Erro P2P');log(`Erro PeerJS: ${e.type||e.message}`)});
+}
+
+$('hostBtn').onclick=startHost;
+$('joinBtn').onclick=startJoin;
+
+// Estado local inicial para permitir uso sem sala.
+isHost=true;state=makeInitialState();render();log('Modo local iniciado. Crie uma sala para multiplayer P2P.');
+</script>
+</body>
+</html>

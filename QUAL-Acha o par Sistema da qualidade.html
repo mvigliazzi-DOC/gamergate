@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encontre os Pares Online - Controle e Gestão da Qualidade</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --p1-color: #3b82f6; /* Azul */
+            --p2-color: #10b981; /* Verde */
+            --p3-color: #f59e0b; /* Amarelo */
+            --p4-color: #ef4444; /* Vermelho */
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        header h1 {
+            font-size: 1.8rem;
+            color: #38bdf8;
+            margin-bottom: 5px;
+        }
+
+        .actions-bar {
+            margin-bottom: 20px;
+        }
+
+        .btn-action {
+            background-color: #38bdf8;
+            color: #0f172a;
+            border: none;
+            padding: 10px 20px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .btn-action:hover {
+            background-color: #0284c7;
+            color: #ffffff;
+        }
+
+        /* Placar dos 4 Jogadores */
+        .scoreboard {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            width: 100%;
+            max-width: 1100px;
+            margin-bottom: 20px;
+        }
+
+        .player-card {
+            background-color: var(--card-bg);
+            border: 3px solid #334155;
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+        }
+
+        .player-card.active {
+            opacity: 1;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .p1 { border-color: var(--p1-color); }
+        .p1.active { background-color: rgba(59, 130, 246, 0.2); }
+        
+        .p2 { border-color: var(--p2-color); }
+        .p2.active { background-color: rgba(16, 185, 129, 0.2); }
+
+        .p3 { border-color: var(--p3-color); }
+        .p3.active { background-color: rgba(245, 158, 11, 0.2); }
+
+        .p4 { border-color: var(--p4-color); }
+        .p4.active { background-color: rgba(239, 68, 68, 0.2); }
+
+        .player-name {
+            font-weight: bold;
+            font-size: 1rem;
+            margin-bottom: 5px;
+        }
+
+        .player-score {
+            font-size: 1.4rem;
+            font-weight: bold;
+        }
+
+        /* Tabuleiro do Jogo */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 10px;
+            width: 100%;
+            max-width: 1200px;
+            perspective: 1000px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 2px solid #334155;
+            border-radius: 8px;
+            height: 110px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 8px;
+            font-size: 0.75rem;
+            line-height: 1.25;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+            position: relative;
+        }
+
+        .card:hover:not(.flipped):not(.matched) {
+            border-color: #38bdf8;
+            transform: translateY(-2px);
+        }
+
+        .card.flipped {
+            background-color: #334155;
+            border-color: #f8fafc;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .card.matched {
+            cursor: default;
+            font-weight: bold;
+        }
+
+        /* Cores das cartas combinadas */
+        .card.matched.p1-matched { border-color: var(--p1-color); background-color: rgba(59, 130, 246, 0.25); }
+        .card.matched.p2-matched { border-color: var(--p2-color); background-color: rgba(16, 185, 129, 0.25); }
+        .card.matched.p3-matched { border-color: var(--p3-color); background-color: rgba(245, 158, 11, 0.25); }
+        .card.matched.p4-matched { border-color: var(--p4-color); background-color: rgba(239, 68, 68, 0.25); }
+
+        .card .card-type {
+            position: absolute;
+            top: 4px;
+            left: 6px;
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            color: #94a3b8;
+            font-weight: bold;
+        }
+
+        /* Modal de Fim de Jogo e Classificação */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            border: 2px solid #38bdf8;
+        }
+
+        .modal-content h2 {
+            margin-bottom: 15px;
+            color: #38bdf8;
+        }
+
+        .ranking-list {
+            margin: 20px 0;
+            text-align: left;
+            list-style: none;
+        }
+
+        .ranking-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            background-color: #0f172a;
+            font-weight: bold;
+        }
+
+        .btn-restart {
+            margin-top: 15px;
+            background-color: #10b981;
+            color: #0f172a;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 900px) {
+            .grid-container {
+                grid-template-columns: repeat(5, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .grid-container {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            .scoreboard {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .card {
+                height: 95px;
+                font-size: 0.65rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Encontre os Pares Online (20 Pares)</h1>
+        <p>Controle Estatístico e Ferramentas da Qualidade</p>
+    </header>
+
+    <div class="actions-bar">
+        <button class="btn-action" onclick="initGame()">🔄 Reiniciar Jogo</button>
+    </div>
+
+    <!-- Placar dos 4 Jogadores -->
+    <div class="scoreboard">
+        <div class="player-card p1 active" id="p1-display">
+            <div class="player-name" style="color: var(--p1-color);">Jogador 1 (Azul)</div>
+            <div class="player-score" id="score-1">0 pts</div>
+        </div>
+        <div class="player-card p2" id="p2-display">
+            <div class="player-name" style="color: var(--p2-color);">Jogador 2 (Verde)</div>
+            <div class="player-score" id="score-2">0 pts</div>
+        </div>
+        <div class="player-card p3" id="p3-display">
+            <div class="player-name" style="color: var(--p3-color);">Jogador 3 (Amarelo)</div>
+            <div class="player-score" id="score-3">0 pts</div>
+        </div>
+        <div class="player-card p4" id="p4-display">
+            <div class="player-name" style="color: var(--p4-color);">Jogador 4 (Vermelho)</div>
+            <div class="player-score" id="score-4">0 pts</div>
+        </div>
+    </div>
+
+    <!-- Tabuleiro das 40 Cartas -->
+    <div class="grid-container" id="game-board"></div>
+
+    <!-- Modal Vitória e Classificação Final -->
+    <div class="modal" id="win-modal">
+        <div class="modal-content">
+            <h2>🏆 Classificação Final 🏆</h2>
+            <ul class="ranking-list" id="ranking-container"></ul>
+            <button class="btn-restart" onclick="initGame()">Jogar Novamente</button>
+        </div>
+    </div>
+
+    <script>
+        // Pares ajustados de acordo com os temas estudados
+        const cardData = [
+            { id: 1, text: "Diferença entre o maior e o menor valor de uma mesma amostra de dados.", type: "Conceito CEP" },
+            { id: 1, text: "Amplitude (R)", type: "Ferramenta/Termo" },
+
+            { id: 2, text: "Medida de dispersão que avalia o quão distantes os dados estão da média; sua raiz quadrada é o desvio padrão.", type: "Conceito CEP" },
+            { id: 2, text: "Variância (s²)", type: "Ferramenta/Termo" },
+
+            { id: 3, text: "Valor central que divide uma amostra ordenada exatamente ao meio (50% acima e 50% abaixo).", type: "Conceito CEP" },
+            { id: 3, text: "Mediana", type: "Ferramenta/Termo" },
+
+            { id: 4, text: "Carta de controle para medições contínuas recomendada para subgrupos maiores que 10 itens.", type: "Conceito CEP" },
+            { id: 4, text: "Carta X̄ - S (Média e Desvio Padrão)", type: "Ferramenta/Termo" },
+
+            { id: 5, text: "Gráfico de controle por atributos usado para monitorar a proporção de itens defeituosos com amostra variável.", type: "Conceito CEP" },
+            { id: 5, text: "Carta p", type: "Ferramenta/Termo" },
+
+            { id: 6, text: "Gráfico de controle por atributos usado para contar o número total de defeitos em tamanho de amostra constante.", type: "Conceito CEP" },
+            { id: 6, text: "Carta c", type: "Ferramenta/Termo" },
+
+            { id: 7, text: "Ferramenta visual que categoriza causas de um problema através dos 6Ms (Máquina, Método, Mão de Obra, etc.).", type: "Ferramentas" },
+            { id: 7, text: "Diagrama de Causa e Efeito (Ishikawa)", type: "Ferramenta/Termo" },
+
+            { id: 8, text: "Metodologia interativa em 4 etapas (Planejar, Executar, Verificar, Agir) para melhoria contínua.", type: "Ferramentas" },
+            { id: 8, text: "Ciclo PDCA", type: "Ferramenta/Termo" },
+
+            { id: 9, text: "Princípio 80/20 que indica que a maioria dos problemas decorre de poucas causas vitais.", type: "Ferramentas" },
+            { id: 9, text: "Diagrama de Pareto", type: "Ferramenta/Termo" },
+
+            { id: 10, text: "Gráfico de barras de frequência contínua que exibe o formato da distribuição e tendência central dos dados.", type: "Ferramentas" },
+            { id: 10, text: "Histograma", type: "Ferramenta/Termo" },
+
+            { id: 11, text: "Ferramenta para criação de planos de ação respondendo a 7 perguntas essenciais (O que, Por que, Quem, etc.).", type: "Ferramentas" },
+            { id: 11, text: "5W2H", type: "Ferramenta/Termo" },
+
+            { id: 12, text: "Filosofia focada na eliminação contínua de 8 desperdícios e criação de valor para o cliente.", type: "Gestão Lean" },
+            { id: 12, text: "Lean Manufacturing", type: "Ferramenta/Termo" },
+
+            { id: 13, text: "Técnica preventiva para mapear modos de falha potenciais calculando o RPN (S x O x D).", type: "Análise Risco" },
+            { id: 13, text: "FMEA", type: "Ferramenta/Termo" },
+
+            { id: 14, text: "Índice do FMEA obtido pela multiplicação da Severidade x Ocorrência x Detecção.", type: "Análise Risco" },
+            { id: 14, text: "RPN (Número de Prioridade do Risco)", type: "Ferramenta/Termo" },
+
+            { id: 15, text: "Filosofia que estabelece a produção puxada exatamente na quantidade e momento necessários.", type: "Produção" },
+            { id: 15, text: "Just-in-Time (JIT)", type: "Ferramenta/Termo" },
+
+            { id: 16, text: "Sistema visual de cartões e quadros usado para controlar e limitar o trabalho em andamento (WIP).", type: "Produção" },
+            { id: 16, text: "Kanban", type: "Ferramenta/Termo" },
+
+            { id: 17, text: "Desperdício Lean caracterizado por fabricar itens antes ou além da demanda do cliente.", type: "Gestão Lean" },
+            { id: 17, text: "Superprodução", type: "Ferramenta/Termo" },
+
+            { id: 18, text: "Variações inerentes ao próprio processo produtivo, de origem aleatória e natural.", type: "Conceito CEP" },
+            { id: 18, text: "Causas Comuns", type: "Ferramenta/Termo" },
+
+            { id: 19, text: "Variações decorrentes de fatores externos ou falhas pontuais que exigem ação corretiva.", type: "Conceito CEP" },
+            { id: 19, text: "Causas Especiais", type: "Ferramenta/Termo" },
+
+            { id: 20, text: "Carta de controle de variáveis utilizada quando se analisa apenas uma medição individual por vez (n=1).", type: "Conceito CEP" },
+            { id: 20, text: "Carta I-MR (Valores Individuais)", type: "Ferramenta/Termo" }
+        ];
+
+        let players = [
+            { id: 1, name: "Jogador 1", colorClass: "p1-matched", score: 0 },
+            { id: 2, name: "Jogador 2", colorClass: "p2-matched", score: 0 },
+            { id: 3, name: "Jogador 3", colorClass: "p3-matched", score: 0 },
+            { id: 4, name: "Jogador 4", colorClass: "p4-matched", score: 0 }
+        ];
+
+        let currentPlayerIndex = 0;
+        let flippedCards = [];
+        let lockBoard = false;
+        let totalMatches = 0;
+
+        function initGame() {
+            const board = document.getElementById('game-board');
+            board.innerHTML = '';
+            
+            players.forEach(p => p.score = 0);
+            currentPlayerIndex = 0;
+            totalMatches = 0;
+            updateScoreboard();
+            document.getElementById('win-modal').style.display = 'none';
+
+            // Embaralhar as 40 cartas
+            const shuffled = [...cardData].sort(() => Math.random() - 0.5);
+
+            shuffled.forEach((data, index) => {
+                const card = document.createElement('div');
+                card.classList.add('card');
+                card.dataset.pairId = data.id;
+                card.dataset.index = index;
+
+                card.innerHTML = `
+                    <span class="card-type">${data.type}</span>
+                    <span class="card-text">?</span>
+                `;
+
+                card.addEventListener('click', () => handleCardClick(card, data));
+                board.appendChild(card);
+            });
+        }
+
+        function handleCardClick(card, data) {
+            if (lockBoard || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+            card.classList.add('flipped');
+            card.querySelector('.card-text').innerText = data.text;
+            flippedCards.push({ card, data });
+
+            if (flippedCards.length === 2) {
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            lockBoard = true;
+            const [card1, card2] = flippedCards;
+            const isMatch = card1.data.id === card2.data.id;
+
+            if (isMatch) {
+                // ACERTOU: +10 Pontos
+                players[currentPlayerIndex].score += 10;
+                
+                setTimeout(() => {
+                    card1.card.classList.add('matched', players[currentPlayerIndex].colorClass);
+                    card2.card.classList.add('matched', players[currentPlayerIndex].colorClass);
+                    
+                    flippedCards = [];
+                    lockBoard = false;
+                    totalMatches++;
+
+                    updateScoreboard();
+
+                    if (totalMatches === cardData.length / 2) {
+                        endGame();
+                    }
+                }, 500);
+
+            } else {
+                // ERROU: Passa a vez
+                setTimeout(() => {
+                    card1.card.classList.remove('flipped');
+                    card2.card.classList.remove('flipped');
+                    card1.card.querySelector('.card-text').innerText = '?';
+                    card2.card.querySelector('.card-text').innerText = '?';
+
+                    flippedCards = [];
+                    currentPlayerIndex = (currentPlayerIndex + 1) % 4;
+                    updateScoreboard();
+                    lockBoard = false;
+                }, 1200);
+            }
+        }
+
+        function updateScoreboard() {
+            players.forEach((p, index) => {
+                document.getElementById(`score-${p.id}`).innerText = `${p.score} pts`;
+                const displayCard = document.getElementById(`p${p.id}-display`);
+                
+                if (index === currentPlayerIndex) {
+                    displayCard.classList.add('active');
+                } else {
+                    displayCard.classList.remove('active');
+                }
+            });
+        }
+
+        function endGame() {
+            const modal = document.getElementById('win-modal');
+            const rankingContainer = document.getElementById('ranking-container');
+            
+            // Ordena os jogadores por pontuação
+            const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+
+            rankingContainer.innerHTML = '';
+            sortedPlayers.forEach((player, index) => {
+                const li = document.createElement('li');
+                li.classList.add('ranking-item');
+                
+                let medal = `${index + 1}º Lugar`;
+                if (index === 0) medal = '🥇 1º Lugar';
+                if (index === 1) medal = '🥈 2º Lugar';
+                if (index === 2) medal = '🥉 3º Lugar';
+
+                li.innerHTML = `
+                    <span>${medal} - ${player.name}</span>
+                    <span>${player.score} pts</span>
+                `;
+                rankingContainer.appendChild(li);
+            });
+
+            modal.style.display = 'flex';
+        }
+
+        initGame();
+    </script>
+</body>
+</html>

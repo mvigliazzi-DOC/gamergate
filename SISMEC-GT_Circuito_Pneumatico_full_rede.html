@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circuito Pneumático - O Jogo da Automação Industrial</title>
+    <!-- Importação do PeerJS para conexão em rede via WebRTC/Token sem necessidade de servidor próprio -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --accent-blue: #0284c7;
+            --accent-green: #16a34a;
+            --accent-amber: #d97706;
+            --accent-purple: #9333ea;
+            --accent-red: #dc2626;
+            --text-color: #f8fafc;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            color: #38bdf8;
+            font-size: 22px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        header p {
+            color: #94a3b8;
+            font-size: 13px;
+        }
+
+        .header-title-box {
+            text-align: left;
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, #eab308, #ca8a04);
+            color: #0f172a;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .restart-btn:hover {
+            background: linear-gradient(135deg, #facc15, #eab308);
+            transform: translateY(-2px);
+        }
+
+        .main-container {
+            display: flex;
+            gap: 20px;
+            flex: 1;
+        }
+
+        /* Board Styling */
+        .board-container {
+            flex: 2;
+            background: var(--panel-bg);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid #334155;
+            overflow-x: auto;
+        }
+
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 8px;
+            min-width: 900px;
+        }
+
+        .tile {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            font-size: 11px;
+            border: 2px solid transparent;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .tile:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+
+        .tile.b1 { border-color: #38bdf8; } 
+        .tile.b2 { border-color: #4ade80; } 
+        .tile.b3 { border-color: #fb923c; } 
+        .tile.b4 { border-color: #c084fc; } 
+        .tile.bonus { background: #047857 !important; border-color: #34d399; }
+        .tile.onus { background: #b91c1c !important; border-color: #f87171; }
+        .tile.start { background: #0d9488 !important; border-color: #2dd4bf; }
+        .tile.finish { background: #b45309 !important; border-color: #facc15; }
+
+        .tile-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 12px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .tile-body {
+            font-size: 9px;
+            line-height: 1.1;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            opacity: 0.95;
+            margin-top: 2px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .pawns-container {
+            display: flex;
+            gap: 3px;
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            background: rgba(15, 23, 42, 0.85);
+            padding: 2px 4px;
+            border-radius: 10px;
+            border: 1px solid #475569;
+        }
+
+        .pawn {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 1.5px solid #fff;
+            box-shadow: 0 0 4px rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: #ffffff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+        }
+
+        .p1 { background-color: #ef4444; }
+        .p2 { background-color: #3b82f6; }
+        .p3 { background-color: #22c55e; }
+        .p4 { background-color: #eab308; color: #000; text-shadow: none; }
+
+        /* Control Panel Styling */
+        .sidebar {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 340px;
+        }
+
+        .card-panel {
+            background: var(--panel-bg);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid #334155;
+        }
+
+        .players-dashboard {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .player-card {
+            background: #0f172a;
+            border-radius: 8px;
+            padding: 8px 12px;
+            border: 1px solid #334155;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+        }
+
+        .player-card.active {
+            border-color: #38bdf8;
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+        }
+
+        .player-card.finished {
+            opacity: 0.6;
+            background: #1e293b;
+        }
+
+        .stats-badge {
+            background: #334155;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #38bdf8;
+            font-weight: bold;
+        }
+
+        .dice-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .dice-btn {
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .dice-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #0369a1, #075985);
+            transform: translateY(-1px);
+        }
+
+        .dice-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .dice-result {
+            font-size: 26px;
+            font-weight: bold;
+            color: #38bdf8;
+            height: 32px;
+        }
+
+        /* Action Modal Area */
+        .action-area {
+            background: #0f172a;
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid #334155;
+            min-height: 240px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .timer-bar-container {
+            width: 100%;
+            height: 8px;
+            background: #334155;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .timer-bar {
+            height: 100%;
+            background: #ef4444;
+            width: 100%;
+            transition: width 1s linear;
+        }
+
+        .timer-text {
+            font-size: 12px;
+            color: #f87171;
+            font-weight: bold;
+            text-align: right;
+            margin-bottom: 6px;
+        }
+
+        .question-title {
+            font-size: 12px;
+            color: #38bdf8;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .question-text {
+            font-size: 13px;
+            line-height: 1.4;
+            margin-bottom: 12px;
+        }
+
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .option-btn {
+            background: #1e293b;
+            border: 1px solid #475569;
+            color: white;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: left;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .option-btn:hover {
+            background: #334155;
+            border-color: #38bdf8;
+        }
+
+        .status-msg {
+            font-size: 14px;
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+            margin-top: 8px;
+            font-weight: bold;
+        }
+
+        .status-correct { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; }
+        .status-wrong { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
+
+        /* Ranking Modal */
+        .ranking-card {
+            background: #0f172a;
+            border: 2px solid #facc15;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .ranking-title {
+            color: #facc15;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+
+        .ranking-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .ranking-item {
+            background: #1e293b;
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        /* Inputs & Modos */
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .input-group label {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .input-control {
+            background: #0f172a;
+            border: 1px solid #475569;
+            color: white;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .net-badge {
+            background: #16a34a;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title-box">
+        <h1>Circuito Pneumático - O Jogo da Automação Industrial</h1>
+        <p>Avance no circuito respondendo a questões técnicas ou enfrente ônus/bônus na linha de produção!</p>
+    </div>
+    <button class="restart-btn" onclick="showModeSelection()">🎮 Escolher Modo de Jogo</button>
+</header>
+
+<div class="main-container">
+    <div class="board-container">
+        <div class="board-grid" id="board"></div>
+    </div>
+
+    <div class="sidebar">
+        <div class="card-panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="font-size: 14px; color: #94a3b8;">Status dos Jogadores</h3>
+                <span id="modeBadge" class="net-badge" style="background: #0284c7;">MODO</span>
+            </div>
+            
+            <div class="players-dashboard" id="playersDashboard"></div>
+
+            <div class="dice-section">
+                <button class="dice-btn" id="rollBtn" onclick="rollDice()">Rolar Dado 🎲</button>
+                <div class="dice-result" id="diceResult"></div>
+            </div>
+
+            <div class="action-area" id="actionArea">
+                <p style="color: #94a3b8; text-align: center; margin: auto;">Selecione um Modo de Jogo para começar!</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Raw Question Data extracted from PDF
+const questionsData = [{"id": 1, "cat": "B1 - FUND", "q": "Qual o princípio físico que rege a transmissão de pressão em fluidos confinados, base de sistemas pneumáticos?", "r": "Princípio de Pascal A pressão aplicada em um ponto de um fluido confinado transmite-se integralmente a todos os pontos do fluido e das paredes do vaso."}, {"id": 2, "cat": "B1 - FUND", "q": "Qual a relação de conversão entre a unidade de pressão bar e a unidade do Sistema Internacional Pascal (Pa)?", "r": "Conversão de Pressão 1 bar equivale a 10^5 Pascal (100.000 Pa) ou 100 kPa, sendo as unidades mais comuns em redes pneumáticas."}, {"id": 3, "cat": "B1 - FUND", "q": "Como funciona um compressor de pistão (alternativo), muito comum em pequenas e médias oficinas?", "r": "Compressor de Pistão O ar é aspirado e comprimido pelo movimento alternado de um pistão dentro de um cilindro através de válvulas de admissão e escape."}, {"id": 4, "cat": "B1 - FUND", "q": "Qual a vantagem operacional do compressor rotativo de parafusos em relação ao de pistão em indústrias?", "r": "Compressor de Parafuso Fornece fluxo contínuo de ar comprimido sem pulsações, com menor nível de ruído e alta eficiência para demandas industriais constantes."}, {"id": 5, "cat": "B1 - FUND", "q": "Por que compressores de membrana (diafragma) são essenciais em indústrias farmacêuticas e alimentícias?", "r": "Compressor de Membrana A câmara de compressão é totalmente isolada das partes lubrificadas, garantindo um ar comprimido 100% isento de óleo."}, {"id": 6, "cat": "B1 - FUND", "q": "Qual a tríplice função do reservatório de ar comprimido em uma planta industrial?", "r": "Reservatório de Ar Atua como pulmão (estabiliza a pressão), resfria o ar comprimido e decanta o condensado residual acumulado."}, {"id": 7, "cat": "B1 - FUND", "q": "Como atua o filtro de ar na entrada da linha de distribuição pneumática?", "r": "Filtro de Ar Retém impurezas sólidas (poeira, fuligem) e separa gotículas de água/óleo por ação centrífuga e elemento filtrante."}, {"id": 8, "cat": "B1 - FUND", "q": "Qual o princípio de funcionamento de um secador de ar comprimido por refrigeração?", "r": "Secador por Refrigeração Resfria o ar a cerca de 3°C para forçar a condensação da umidade de vapor em água líquida, que é purgada."}, {"id": 9, "cat": "B1 - FUND", "q": "Em quais aplicações é obrigatório o uso de um secador por adsorção química?", "r": "Secador por Adsorção Onde se exige ar extremamente seco (ponto de orvalho até -70°C), como em instrumentos analíticos e áreas externas sujeitas a congelamento."}, {"id": 10, "cat": "B1 - FUND", "q": "Para que serve o lubrificador na unidade FRL e onde seu uso deve ser evitado?", "r": "Lubrificador Introduz névoa de óleo para reduzir atrito em vedações móveis. Deve ser evitado em circuitos isentos de óleo (alimentos, salas limpas)."}, {"id": 11, "cat": "B1 - FUND", "q": "Como funciona o sistema de alívio (escape) de uma válvula reguladora de pressão pneumática?", "r": "Reguladora de Pressão Se a pressão a jusante exceder o ajuste, o diafragma sobe e abre um orifício de escape, liberando o excesso para a atmosfera."}, {"id": 12, "cat": "B1 - FUND", "q": "Qual instrumento é utilizado para monitorar visualmente a pressão manométrica em um circuito?", "r": "Manômetro Dispositivo de medição que indica a pressão relativa acima da atmosférica, geralmente calibrado em bar, psi ou kPa."}, {"id": 13, "cat": "B1 - FUND", "q": "Quais são os três elementos integrados representados pelo símbolo FRL?", "r": "Unidade FRL Integra o Filtro (remoção de impurezas), o Regulador de Pressão (estabilização) e o Lubrificador (proteção de vedações)."}, {"id": 14, "cat": "B1 - FUND", "q": "Qual a principal vantagem de uma rede de distribuição pneumática em circuito fechado (anel)?", "r": "Rede em Anel Permite fluxo em duas direções até os pontos de consumo, reduzindo quedas de pressão e equilibrando o abastecimento."}, {"id": 15, "cat": "B1 - FUND", "q": "Quais os riscos associados a uma rede de distribuição pneumática em circuito aberto (radial)?", "r": "Rede em Circuito Aberto Maior suscetibilidade a quedas de pressão nas extremidades finais e acúmulo de condensado no fim de linha."}, {"id": 16, "cat": "B1 - FUND", "q": "Por que as tubulações principais de ar comprimido devem ter uma inclinação de 1% a 2%?", "r": "Inclinação da Tubulação Direciona a água condensada pela gravidade para pontos baixos da rede, onde estão instalados os drenos."}, {"id": 17, "cat": "B1 - FUND", "q": "O que é e para que serve a tomada de ar tipo 'pescoço de ganso' nos ramais de distribuição?", "r": "Pescoço de Ganso Conexão que sai pela parte superior do tubo principal, impedindo que a água condensada entre nos equipamentos de trabalho."}, {"id": 18, "cat": "B1 - FUND", "q": "Qual a função do dreno de condensado e onde ele deve ser posicionado na rede?", "r": "Dreno de Condensado Elimina a água acumulada. Deve ser posicionado no fundo do reservatório, em curvas baixas e fins de linha."}, {"id": 19, "cat": "B1 - FUND", "q": "Como atua a válvula de segurança instalada no reservatório de ar comprimido?", "r": "Válvula de Segurança Abre mecanicamente por ação de mola se a pressão ultrapassar o limite de segurança do vaso, evitando explosões."}, {"id": 20, "cat": "B1 - FUND", "q": "Como é controlado o ruído de alta frequência gerado pelo escape rápido do ar de válvulas?", "r": "Silenciador Dispositivo poroso acoplado à via de escape que expande o ar de forma gradual, reduzindo significativamente o nível de ruído (dB)."}, {"id": 21, "cat": "B2 - ATU", "q": "Qual a característica de funcionamento de um cilindro de simples ação com retorno por mola?", "r": "Cilindro Simples Ação Utiliza a pressão do ar comprimido em apenas uma câmara para realizar o avanço; o retorno é mecânico via mola interna."}, {"id": 22, "cat": "B2 - ATU", "q": "Como retorna à posição inicial um cilindro de simples ação com retorno por força externa?", "r": "Retorno por Força Externa O ar comprimido realiza o avanço, e o retorno da haste ocorre devido à gravidade, carga externa ou mola externa."}, {"id": 23, "cat": "B2 - ATU", "q": "Como se caracteriza o comportamento de um atuador linear de dupla ação comum?", "r": "Atuador Dupla Ação Utiliza ar comprimido em ambas as câmaras alternadamente, exercendo força mecânica tanto no avanço quanto no retorno."}, {"id": 24, "cat": "B2 - ATU", "q": "Para que serve o sistema de amortecimento regulável nas cabeças de um cilindro pneumático?", "r": "Amortecimento Regulável Desacelera o pistão no fim do curso, reduzindo o impacto mecânico, o ruído e o desgaste da estrutura do cilindro."}, {"id": 25, "cat": "B2 - ATU", "q": "Qual a principal vantagem construtiva de um cilindro pneumático com haste passante?", "r": "Cilindro com Haste Passante Possui hastes em ambos os lados do pistão, proporcionando igual área de atuação e forças idênticas nos dois sentidos."}, {"id": 26, "cat": "B2 - ATU", "q": "Como funciona um atuador de múltiplas posições (multiposicional)?", "r": "Atuador Multiposicional Composto por dois ou mais cilindros de dupla ação unidos, permitindo alcançar três ou mais posições distintas de parada."}, {"id": 27, "cat": "B2 - ATU", "q": "O que caracteriza um atuador sem haste de acoplamento mecânico?", "r": "Atuador Sem Haste Mecânico O pistão interno conecta-se fisicamente à mesa de carga externa por meio de uma fenda mecânica selada por cintas de aço."}, {"id": 28, "cat": "B2 - ATU", "q": "Qual o princípio de funcionamento de um atuador pneumático sem haste de tipo magnético?", "r": "Atuador Sem Haste Magnético O acoplamento entre o pistão interno e o carro externo é feito por magnetos permanentes de alta força de atração."}, {"id": 29, "cat": "B2 - ATU", "q": "Como se obtém rotação contínua bidirecional em automação pneumática?", "r": "Motor Pneumático Converte a energia do ar comprimido em energia mecânica rotativa contínua, podendo atuar nos dois sentidos de giro."}, {"id": 30, "cat": "B2 - ATU", "q": "O que caracteriza um atuador de giro limitado (motor oscilante)?", "r": "Atuador Oscilante Transforma o movimento linear do ar em rotação angular limitada (comumente 90°, 180° ou 360°) via pinhão e cremalheira."}, {"id": 31, "cat": "B2 - ATU", "q": "Qual a fórmula matemática para calcular a força teórica de avanço de um cilindro de dupla ação?", "r": "Força de Avanço F = P * A (Pressão multiplicada pela área total do pistão, sem desconto da haste: F_av = P * pi * D^2 / 4)."}, {"id": 32, "cat": "B2 - ATU", "q": "Por que a força teórica de retorno de um cilindro convencional é menor que a de avanço?", "r": "Força de Retorno Menor porque a haste ocupa espaço na câmara dianteira, reduzindo a área efetiva onde o ar atua: F_ret = P * pi * (D^2 - d^2) / 4."}, {"id": 33, "cat": "B2 - ATU", "q": "Como a vazão de ar do circuito afeta diretamente o comportamento do atuador?", "r": "Velocidade do Atuador A vazão de ar comprimido determina a velocidade de deslocamento da haste; mais vazão resulta em avanço mais rápido."}, {"id": 34, "cat": "B2 - ATU", "q": "Qual o benefício de instalar um cilindro com fixação por rótula articulada na haste?", "r": "Rótula Articulada Absorve desalinhamentos angulares e esforços radiais nocivos, evitando o empenamento da haste do cilindro em movimentos curvos."}, {"id": 35, "cat": "B2 - ATU", "q": "Quando é recomendado o uso de montagem de cilindro com flange traseira rígida?", "r": "Flange Traseira Recomendada para aplicações de compressão linear pura, fixando o cilindro rigidamente em painéis para resistir a forças axiais."}, {"id": 36, "cat": "B2 - ATU", "q": "Como funciona o acionamento mecânico de uma válvula por came?", "r": "Acionamento por Came A válvula é comutada pela ação de uma rampa móvel inclinada ligada à máquina, que empurra gradualmente o piloto."}, {"id": 37, "cat": "B2 - ATU", "q": "Qual o modo de operação de um sensor / piloto mecânico por rolete?", "r": "Acionamento por Rolete Fim de curso acionado fisicamente pela haste do cilindro ou parte móvel que pressiona uma pequena roda giratória."}, {"id": 38, "cat": "B2 - ATU", "q": "Como atua um acionamento por gatilho (rolete escamoteável)?", "r": "Acionamento por Gatilho Aciona a válvula em apenas um sentido de passagem do atuador; no retorno, o rolete dobra-se (escamoteia) sem acionar o circuito."}, {"id": 39, "cat": "B2 - ATU", "q": "O que representa o acionamento por mola em um diagrama de válvula direcional?", "r": "Retorno por Mola Indica que a válvula retornará automaticamente à sua posição inicial de repouso assim que o sinal de comando for removido."}, {"id": 40, "cat": "B2 - ATU", "q": "Qual a função do acionamento por centragem por mola em válvulas de três posições?", "r": "Centragem por Mola Garante que, na ausência de sinais elétricos ou pneumáticos nas extremidades, a válvula permaneça estável na posição central."}, {"id": 41, "cat": "B3 - VALV", "q": "Qual a função de uma válvula direcional de 2/2 vias normalmente fechada (NF)?", "r": "Válvula 2/2 NF Atua como torneira liga/desliga (bloqueia o fluxo no repouso, abre ao ser acionada), com 1 entrada e 1 saída."}, {"id": 42, "cat": "B3 - VALV", "q": "Como opera uma válvula direcional de 3/2 vias normalmente fechada (NF)?", "r": "Válvula 3/2 NF No repouso, bloqueia a pressão (1) e descarrega o trabalho (2) para o escape (3). Usada para comandar cilindros de simples ação."}, {"id": 43, "cat": "B3 - VALV", "q": "Qual o comportamento de uma válvula direcional de 3/2 vias normalmente aberta (NA)?", "r": "Válvula 3/2 NA No repouso, permite passagem livre da pressão (1) para a saída (2). Usada para comandos de parada de emergência."}, {"id": 44, "cat": "B3 - VALV", "q": "Qual a diferença de aplicação entre uma válvula 4/2 vias e uma de 5/2 vias?", "r": "Válvula 4/2 vs 5/2 A 4/2 possui apenas 1 escape comum para ambas as câmaras; a 5/2 possui 2 escapes independentes, permitindo regular velocidades separadas."}, {"id": 45, "cat": "B3 - VALV", "q": "Por que a válvula direcional de 5/2 vias é a mais utilizada no controle de atuadores de dupla ação?", "r": "Válvula 5/2 vias Permite alternar a pressurização das câmaras dianteira e traseira enquanto exaure a câmara oposta de forma independente."}, {"id": 46, "cat": "B3 - VALV", "q": "O que ocorre no centro fechado de uma válvula de 4/3 vias?", "r": "Válvula 4/3 Centro Fechado Na posição central, todas as vias são bloqueadas, travando o atuador de dupla ação em qualquer ponto intermediário do curso."}, {"id": 47, "cat": "B3 - VALV", "q": "Qual o comportamento de um cilindro comandado por válvula 4/3 vias centro aberto despressurizado?", "r": "Válvula 4/3 Centro Aberto No centro, as câmaras do cilindro são ligadas ao escape, permitindo que a haste seja movida manualmente sem resistência do ar."}, {"id": 48, "cat": "B3 - VALV", "q": "Qual a lógica de funcionamento e a aplicação da válvula de simultaneidade 'E'?", "r": "Válvula de Simultaneidade (E) Exige pressão em ambas as entradas para emitir sinal na saída. Usada em circuitos bimanual de segurança de prensas."}, {"id": 49, "cat": "B3 - VALV", "q": "Como funciona a válvula alternadora 'OU' (válvula seletora) em circuitos pneumáticos?", "r": "Válvula Alternadora (OU) Emite sinal na saída se houver pressão em qualquer uma das duas entradas (ou em ambas). Usada para comandos de pontos distintos."}, {"id": 50, "cat": "B3 - VALV", "q": "Qual a função de uma válvula de retenção convencional em um circuito?", "r": "Válvula de Retenção Permite a passagem livre do ar comprimido em apenas um sentido e bloqueia hermeticamente no sentido inverso."}, {"id": 51, "cat": "B3 - VALV", "q": "Como opera uma válvula de retenção pilotada e qual sua aplicação de segurança?", "r": "Retenção Pilotada Bloqueia o retorno do ar até que um sinal piloto abra a válvula. Evita a queda brusca de cilindros verticais em falhas de pressão."}, {"id": 52, "cat": "B3 - VALV", "q": "Qual a função e a vantagem de utilizar uma válvula de escape rápido na saída do cilindro?", "r": "Escape Rápido Descarrega o ar de exaustão direto para a atmosfera, sem passar pela tubulação longa, aumentando drasticamente a velocidade do cilindro."}, {"id": 53, "cat": "B3 - VALV", "q": "Como deve ser instalada a válvula reguladora de fluxo unidirecional para controlar a velocidade do atuador?", "r": "Controle de Velocidade Deve ser montada regulando o escape do ar (muffling out) para manter o movimento do cilindro suave e sem solavancos mecânicos."}, {"id": 54, "cat": "B3 - VALV", "q": "Pela norma DIN/ISO 1219, a qual conexão se refere o número 1 (ou letra P) em uma válvula?", "r": "Conexão de Pressão (1 / P) Identifica a porta de entrada de ar comprimido vindo da rede de alimentação para a válvula."}, {"id": 55, "cat": "B3 - VALV", "q": "Quais números representam as vias de trabalho dirigidas aos atuadores segundo a norma ISO 1219?", "r": "Conexões de Trabalho (2 e 4 / A e B) Identificam as saídas da válvula que levam o ar sob pressão para as câmaras do cilindro."}, {"id": 56, "cat": "B3 - VALV", "q": "Quais números designam as vias de escape do ar comprimido para a atmosfera?", "r": "Conexões de Escape (3 e 5 / R, S e T) Identificam as portas que descarregam o ar de exaustão do atuador na atmosfera."}, {"id": 57, "cat": "B3 - VALV", "q": "Como são identificados os canais de pilotagem (comando) em válvulas conforme a norma DIN/ISO 1219?", "r": "Conexões de Pilotagem (12, 14, 10) Identificam as portas de sinal de comando (ex: sinal 12 liga a pressão 1 com a saída de trabalho 2)."}, {"id": 58, "cat": "B3 - VALV", "q": "O que caracteriza o acionamento por pilotagem pneumática direta?", "r": "Pilotagem Direta A válvula direcional principal é comutada por um pulso de ar comprimido que empurra o carretel interno."}, {"id": 59, "cat": "B3 - VALV", "q": "Como atua o acionamento manual por botão tipo cogumelo de emergência com trava?", "r": "Botão de Emergência com Trava Bloqueia mecanicamente a válvula na posição acionada ao ser pressionado; exige giro manual para destravar."}, {"id": 60, "cat": "B3 - VALV", "q": "Qual a finalidade de um servo-piloto pneumático integrado em válvulas elétricas de alta vazão?", "r": "Servo-Piloto Utiliza a própria pressão do ar da rede para mover o carretel da válvula principal, reduzindo o tamanho e o consumo elétrico da solenoide."}, {"id": 61, "cat": "B4 - ELETR", "q": "Como funciona um contato elétrico do tipo Normal Aberto (NA) em repouso?", "r": "Contato NA Mantém o circuito elétrico aberto em repouso (sem passagem de corrente); fecha somente quando o acionador mecânico ou elétrico é ativado."}, {"id": 62, "cat": "B4 - ELETR", "q": "Qual o comportamento de um contato elétrico do tipo Normal Fechado (NF)?", "r": "Contato NF Mantém o circuito fechado em repouso, permitindo fluxo elétrico; abre instantaneamente quando o elemento é acionado."}, {"id": 63, "cat": "B4 - ELETR", "q": "O que é um contato elétrico do tipo comutador (inversor)?", "r": "Contato Comutador Possui um terminal comum, um NF e um NA. Ao ser acionado, desliga uma linha elétrica e liga outra simultaneamente."}, {"id": 64, "cat": "B4 - ELETR", "q": "Como opera o sensor de proximidade magnético (tipo Reed Switch) nos cilindros?", "r": "Sensor Reed Switch Possui contatos metálicos flexíveis selados que se fecham na presença do campo magnético do anel imã contido no pistão."}, {"id": 65, "cat": "B4 - ELETR", "q": "Quais materiais podem ser detectados de forma confiável por um sensor indutivo?", "r": "Sensor Indutivo Detecta apenas materiais metálicos (ferro, aço, alumínio) através da perturbação de um campo eletromagnetico de alta frequência."}, {"id": 66, "cat": "B4 - ELETR", "q": "Qual a grande vantagem de aplicação do sensor capacitivo em relação ao indutivo?", "r": "Sensor Capacitivo Detecta materiais metálicos e não-metálicos (plástico, vidro, madeira, líquidos) pela variação de capacitância dielétrica."}, {"id": 67, "cat": "B4 - ELETR", "q": "Como funciona um sensor de proximidade óptico barreira em linhas de automação?", "r": "Sensor Óptico Barreira Emissor e receptor ficam alinhados em lados opostos; a detecção ocorre quando um objeto interrompe fisicamente o feixe de luz."}, {"id": 68, "cat": "B4 - ELETR", "q": "Como o sinal elétrico do painel de comando é convertido em ação mecânica na válvula pneumática?", "r": "Solenoide de Válvula Uma bobina elétrica que, ao ser energizada, gera um campo magnético que atrai um embolo metálico, comutando a válvula."}, {"id": 69, "cat": "B4 - ELETR", "q": "Qual a função do relé auxiliar eletromecânico em um circuito de comando elétrico?", "r": "Relé Auxiliar Amplia e isola contatos. Permite que um sinal elétrico fraco de um CLP comute múltiplas cargas pesadas e isoladas eletricamente."}, {"id": 70, "cat": "B4 - ELETR", "q": "Como funciona um relé temporizador com retardo na ativação (ON-Delay)?", "r": "Temporizador ON-Delay Inicia a contagem de tempo quando recebe sinal de energia; seus contatos comutam somente após decorrido o tempo programado."}, {"id": 71, "cat": "B4 - ELETR", "q": "Qual o comportamento dos contatos de um relé temporizador com retardo na desativação (OFF-Delay)?", "r": "Temporizador OFF-Delay Comuta seus contatos instantaneamente ao receber energia; ao perder o sinal, mantém os contatos ligados pelo tempo programado."}, {"id": 72, "cat": "B4 - ELETR", "q": "Para que serve um contador de pulsos elétrico em painéis de comando de máquinas?", "r": "Contador Elétrico Monitora a quantidade de pulsos elétricos (como fim de curso) e comuta seus contatos ao atingir um valor pré-ajustado de ciclos."}, {"id": 73, "cat": "B4 - ELETR", "q": "Qual a utilidade industrial do indicador óptico (lâmpada piloto) em painéis elétricos?", "r": "Indicador Óptico Sinaliza visualmente o status da máquina (ex: verde para em funcionamento, vermelho para falha térmica ou parada de emergência)."}, {"id": 74, "cat": "B4 - ELETR", "q": "Qual o papel do sinalizador sonoro (buzina ou sirene) na segurança de sistemas industriais?", "r": "Sinalizador Sonoro Emite um aviso acústico imediato para chamar a atenção de operadores em casos de falha crítica, alarmes ou início de ciclo."}, {"id": 75, "cat": "B4 - ELETR", "q": "Por que a tensão de 24 Volts em Corrente Contínua (VCC) é o padrão adotado na maioria dos comandos elétricos?", "r": "Tensão de Comando 24VCC Garante segurança de nível extra-baixa tensão contra choques elétricos graves para os operadores e técnicos de manutenção."}, {"id": 76, "cat": "B4 - ELETR", "q": "A quais partes físicas do símbolo de um relé referem-se os terminais padrão A1 e A2?", "r": "Terminais A1 e A2 Identificam os pontos de conexão para a bobina eletromagnética do relé ou contator para controle de sua ativação."}, {"id": 77, "cat": "B4 - ELETR", "q": "Nos relés industriais, o que indicam as terminações numéricas 11, 12 e 14?", "r": "Numeração de Contatos 11 é o terminal Comum, 12 é o contato NF (normal fechado) e 14 é o contato NA (normal aberto) do mesmo conjunto."}, {"id": 78, "cat": "B4 - ELETR", "q": "O que é e como opera uma chave fim de curso elétrica (rolete elétrico)?", "r": "Fim de Curso Elétrico Interruptor mecânico dotado de rolete, acionado fisicamente por partes móveis de máquinas para fechar ou abrir circuitos elétricos."}, {"id": 79, "cat": "B4 - ELETR", "q": "Por que o botão de parada de emergência elétrico deve possuir obrigatoriamente um contato NF?", "r": "Emergência Elétrica NF Garante segurança ativa (fale-seguro); se o fio quebrar, o circuito se abre e a máquina para imediatamente por falta de corrente."}, {"id": 80, "cat": "B4 - ELETR", "q": "O que é e qual o propósito da lógica de auto-retenção (selo elétrico) em contatores?", "r": "Selo Elétrico Ligação em paralelo de um contato auxiliar NA ao botão de partida. Mantém o circuito energizado mesmo após soltar o botão pulsar."}];
+
+const vibrantColors = [
+    '#0284c7', '#0369a1', '#15803d', '#16a34a', 
+    '#c2410c', '#d97706', '#7e22ce', '#6b21a8', 
+    '#0e7490', '#4338ca', '#b91c1c', '#047857'
+];
+
+const specialTiles = {
+    8: { type: 'onus', name: 'ÔNUS', text: 'Vazamento na Rede de Ar! Volte 2 casas.', effect: -2 },
+    17: { type: 'bonus', name: 'BÔNUS', text: 'Manutenção Preditiva OK! Avance 2 casas.', effect: 2 },
+    26: { type: 'onus', name: 'ÔNUS', text: 'Filtro Entupido! Volte 3 casas.', effect: -3 },
+    35: { type: 'bonus', name: 'BÔNUS', text: 'Pressão Regulada Perfeitamente! Avance 3 casas.', effect: 3 },
+    44: { type: 'onus', name: 'ÔNUS', text: 'Falha no Sensor Indutivo! Volte 2 casas.', effect: -2 },
+    53: { type: 'bonus', name: 'BÔNUS', text: 'Lubrificação Adequada! Avance 2 casas.', effect: 2 },
+    62: { type: 'onus', name: 'ÔNUS', text: 'Solenoide Queimada! Volte 3 casas.', effect: -3 },
+    71: { type: 'bonus', name: 'BÔNUS', text: 'Treinamento de CLP Concluído! Avance 3 casas.', effect: 3 },
+    80: { type: 'onus', name: 'ÔNUS', text: 'Queda de Pressão na Linha! Volte 2 casas.', effect: -2 },
+    88: { type: 'bonus', name: 'BÔNUS', text: 'Inspeção de Segurança Aprovada! Avance 2 casas.', effect: 2 }
+};
+
+// Variaveis de Estado
+let boardTiles = [];
+let players = [];
+let currentPlayer = 0;
+let timerInterval = null;
+let ranking = [];
+let gameMode = 'LOCAL'; // 'SOLO', 'LOCAL', 'NET_HOST', 'NET_CLIENT'
+let peer = null;
+let netConn = null;
+let myPlayerId = 1;
+
+function shuffleArray(array) {
+    let arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+// exibe modal/area de selecao de modo
+function showModeSelection() {
+    clearInterval(timerInterval);
+    document.getElementById('rollBtn').disabled = true;
+    
+    const actionArea = document.getElementById('actionArea');
+    actionArea.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <div class="question-title">Escolha o Modo de Jogo:</div>
+            <button class="dice-btn" style="font-size:13px;" onclick="setupSoloGame()">🤖 Treino Solitário (Vs Bot)</button>
+            <button class="dice-btn" style="font-size:13px; background:linear-gradient(135deg, #16a34a, #15803d);" onclick="setupLocalGameModal()">👥 Jogo Local (2-4 Jogadores)</button>
+            <button class="dice-btn" style="font-size:13px; background:linear-gradient(135deg, #9333ea, #7e22ce);" onclick="setupNetworkGameModal()">🌐 Jogo em Rede (Token)</button>
+        </div>
+    `;
+}
+
+function setupSoloGame() {
+    gameMode = 'SOLO';
+    myPlayerId = 1;
+    document.getElementById('modeBadge').innerText = 'SOLO';
+    document.getElementById('modeBadge').style.background = '#d97706';
+
+    players = [
+        { id: 1, name: 'Você', color: '#ef4444', pos: 0, startTurnPos: 0, totalQuestions: 0, correctAnswers: 0, finished: false, isBot: false },
+        { id: 2, name: 'Robô CLP', color: '#3b82f6', pos: 0, startTurnPos: 0, totalQuestions: 0, correctAnswers: 0, finished: false, isBot: true }
+    ];
+    initBoardAndStart();
+}
+
+function setupLocalGameModal() {
+    const actionArea = document.getElementById('actionArea');
+    actionArea.innerHTML = `
+        <div class="input-group">
+            <label>Quantidade de Jogadores:</label>
+            <select id="numPlayersSelect" class="input-control">
+                <option value="2">2 Jogadores</option>
+                <option value="3">3 Jogadores</option>
+                <option value="4" selected>4 Jogadores</option>
+            </select>
+            <button class="dice-btn" style="margin-top:10px;" onclick="startLocalGame()">Iniciar Jogo Local</button>
+        </div>
+    `;
+}
+
+function startLocalGame() {
+    gameMode = 'LOCAL';
+    myPlayerId = null;
+    document.getElementById('modeBadge').innerText = 'LOCAL';
+    document.getElementById('modeBadge').style.background = '#0284c7';
+
+    const count = parseInt(document.getElementById('numPlayersSelect').value);
+    players = [];
+    const colors = ['#ef4444', '#3b82f6', '#22c55e', '#eab308'];
+    for(let i = 1; i <= count; i++) {
+        players.push({
+            id: i,
+            name: `Jogador ${i}`,
+            color: colors[i-1],
+            pos: 0,
+            startTurnPos: 0,
+            totalQuestions: 0,
+            correctAnswers: 0,
+            finished: false,
+            isBot: false
+        });
+    }
+    initBoardAndStart();
+}
+
+function setupNetworkGameModal() {
+    const actionArea = document.getElementById('actionArea');
+    actionArea.innerHTML = `
+        <div class="input-group">
+            <button class="dice-btn" style="font-size:12px; margin-bottom:10px;" onclick="createNetworkHost()">Criar Sala (Gerar Token)</button>
+            <div style="text-align:center; color:#94a3b8; font-weight:bold; font-size:11px;">OU</div>
+            <label>Digite o Token do Amigo:</label>
+            <input type="text" id="joinTokenInput" class="input-control" placeholder="Ex: pneu-1234">
+            <button class="dice-btn" style="font-size:12px; margin-top:5px; background:linear-gradient(135deg, #16a34a, #15803d);" onclick="joinNetworkHost()">Entrar na Sala</button>
+        </div>
+    `;
+}
+
+function createNetworkHost() {
+    gameMode = 'NET_HOST';
+    myPlayerId = 1;
+    document.getElementById('modeBadge').innerText = 'HOST REDE';
+    document.getElementById('modeBadge').style.background = '#9333ea';
+
+    const token = 'pneu-' + Math.floor(1000 + Math.random() * 9000);
+    
+    players = [
+        { id: 1, name: 'Host (Você)', color: '#ef4444', pos: 0, startTurnPos: 0, totalQuestions: 0, correctAnswers: 0, finished: false },
+        { id: 2, name: 'Convidado', color: '#3b82f6', pos: 0, startTurnPos: 0, totalQuestions: 0, correctAnswers: 0, finished: false }
+    ];
+
+    peer = new Peer(token);
+    
+    document.getElementById('actionArea').innerHTML = `
+        <p style="font-size:12px; color:#38bdf8; text-align:center;">Aguardando conexão do adversário...</p>
+        <p style="font-size:13px; font-weight:bold; text-align:center; margin:10px 0; background:#334155; padding:8px; border-radius:6px;">TOKEN: <span style="color:#facc15;">${token}</span></p>
+        <p style="font-size:11px; color:#94a3b8; text-align:center;">Passe este Token para o outro jogador se conectar.</p>
+    `;
+
+    peer.on('connection', (conn) => {
+        netConn = conn;
+        setupNetListeners();
+        initBoardAndStart();
+    });
+}
+
+function joinNetworkHost() {
+    const token = document.getElementById('joinTokenInput').value.trim();
+    if (!token) {
+        alert('Insira um Token válido!');
+        return;
+    }
+
+    gameMode = 'NET_CLIENT';
+    myPlayerId = 2;
+    document.getElementById('modeBadge').innerText = 'CLIENTE REDE';
+    document.getElementById('modeBadge').style.background = '#9333ea';
+
+    peer = new Peer();
+    peer.on('open', () => {
+        netConn = peer.connect(token);
+        setupNetListeners();
+    });
+}
+
+function setupNetListeners() {
+    netConn.on('open', () => {
+        if (gameMode === 'NET_CLIENT') {
+            document.getElementById('actionArea').innerHTML = `<p style="color:#4ade80; text-align:center;">Conectado! Aguardando o Host sincronizar o jogo...</p>`;
+        }
+    });
+
+    netConn.on('data', (data) => {
+        handleNetData(data);
+    });
+}
+
+function sendNetState(action, payload = {}) {
+    if (netConn && netConn.open) {
+        netConn.send({ action, payload, players, currentPlayer, boardTiles });
+    }
+}
+
+function handleNetData(data) {
+    if (data.players) players = data.players;
+    if (data.currentPlayer !== undefined) currentPlayer = data.currentPlayer;
+    if (data.boardTiles) boardTiles = data.boardTiles;
+
+    renderBoard();
+    updateDashboard();
+
+    if (data.action === 'INIT') {
+        startTurnUI();
+    } else if (data.action === 'DICE_ROLLED') {
+        document.getElementById('diceResult').innerText = `🎲 ${data.payload.diceValue}`;
+    } else if (data.action === 'QUESTION_TIME') {
+        startQuestionTimer(data.payload.tile, true);
+    } else if (data.action === 'ANSWER_RESULT') {
+        showAnswerResult(data.payload.isCorrect, data.payload.correctAnswerText, data.payload.pPos);
+    } else if (data.action === 'NEXT_TURN') {
+        startTurnUI();
+    }
+}
+
+function initBoardAndStart() {
+    const shuffledQuestions = shuffleArray(questionsData);
+    boardTiles = [];
+    let qIndex = 0;
+
+    boardTiles.push({ id: 0, type: 'start', title: 'INÍCIO', q: 'Início da Linha de Produção', color: '#0d9488' });
+
+    for (let i = 1; i <= 89; i++) {
+        if (specialTiles[i]) {
+            boardTiles.push({
+                id: i,
+                type: specialTiles[i].type,
+                title: specialTiles[i].name,
+                q: specialTiles[i].text,
+                effect: specialTiles[i].effect,
+                color: specialTiles[i].type === 'bonus' ? '#047857' : '#b91c1c'
+            });
+        } else {
+            if (qIndex < shuffledQuestions.length) {
+                const qObj = shuffledQuestions[qIndex];
+                qIndex++;
+                let typeClass = 'b1';
+                if (qObj.cat.includes('B2')) typeClass = 'b2';
+                if (qObj.cat.includes('B3')) typeClass = 'b3';
+                if (qObj.cat.includes('B4')) typeClass = 'b4';
+
+                const randomBg = vibrantColors[Math.floor(Math.random() * vibrantColors.length)];
+
+                boardTiles.push({
+                    id: i,
+                    type: typeClass,
+                    title: `CASA ${i} - ${qObj.cat}`,
+                    q: qObj.q,
+                    r: qObj.r,
+                    qId: qObj.id,
+                    color: randomBg
+                });
+            }
+        }
+    }
+
+    boardTiles.push({ id: 90, type: 'finish', title: 'CHEGADA (90)', q: 'Linha 100% Automatizada!', color: '#b45309' });
+
+    currentPlayer = 0;
+    ranking = [];
+
+    if (gameMode === 'NET_HOST') {
+        sendNetState('INIT');
+    }
+
+    renderBoard();
+    updateDashboard();
+    startTurnUI();
+}
+
+function startTurnUI() {
+    let p = players[currentPlayer];
+    // Salva a posição inicial do turno para caso ele erre a pergunta
+    p.startTurnPos = p.pos;
+
+    let isMyTurn = (gameMode === 'LOCAL') || 
+                   (gameMode === 'SOLO' && !p.isBot) || 
+                   (gameMode === 'NET_HOST' && myPlayerId === p.id) || 
+                   (gameMode === 'NET_CLIENT' && myPlayerId === p.id);
+
+    document.getElementById('rollBtn').disabled = !isMyTurn;
+    document.getElementById('diceResult').innerText = '';
+
+    if (isMyTurn) {
+        document.getElementById('actionArea').innerHTML = `
+            <p style="color: #4ade80; text-align: center; margin: auto;">Sua Vez (<strong>${p.name}</strong>)!<br>Role o dado para avançar!</p>
+        `;
+    } else {
+        document.getElementById('actionArea').innerHTML = `
+            <p style="color: #94a3b8; text-align: center; margin: auto;">Aguardando jogada de <strong>${p.name}</strong>...</p>
+        `;
+    }
+
+    if (gameMode === 'SOLO' && p.isBot && !p.finished) {
+        setTimeout(() => {
+            rollDice();
+        }, 1200);
+    }
+}
+
+function renderBoard() {
+    const boardEl = document.getElementById('board');
+    boardEl.innerHTML = '';
+
+    boardTiles.forEach(tile => {
+        const tileEl = document.createElement('div');
+        tileEl.className = `tile ${tile.type}`;
+        tileEl.id = `tile-${tile.id}`;
+        if (tile.color) {
+            tileEl.style.backgroundColor = tile.color;
+        }
+
+        const header = document.createElement('div');
+        header.className = 'tile-header';
+        header.innerHTML = `<span>#${tile.id}</span>`;
+
+        const body = document.createElement('div');
+        body.className = 'tile-body';
+        body.innerText = tile.q;
+
+        tileEl.appendChild(header);
+        tileEl.appendChild(body);
+
+        const pawnsDiv = document.createElement('div');
+        pawnsDiv.className = 'pawns-container';
+
+        players.forEach(p => {
+            if (p.pos === tile.id && !p.finished) {
+                const pawn = document.createElement('div');
+                pawn.className = `pawn p${p.id}`;
+                pawn.innerText = p.id;
+                pawnsDiv.appendChild(pawn);
+            }
+        });
+
+        if (pawnsDiv.children.length > 0) {
+            tileEl.appendChild(pawnsDiv);
+        }
+
+        boardEl.appendChild(tileEl);
+    });
+}
+
+function updateDashboard() {
+    const dashboard = document.getElementById('playersDashboard');
+    dashboard.innerHTML = '';
+
+    players.forEach((p, idx) => {
+        const card = document.createElement('div');
+        card.className = `player-card ${idx === currentPlayer && !p.finished ? 'active' : ''} ${p.finished ? 'finished' : ''}`;
+
+        const accuracy = p.totalQuestions > 0 ? Math.round((p.correctAnswers / p.totalQuestions) * 100) : 0;
+
+        card.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="pawn p${p.id}">${p.id}</div>
+                <span style="font-weight: bold; color: ${p.color};">${p.name} ${p.isBot ? '🤖' : ''}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="color: #94a3b8;">Casa: <strong style="color:#f8fafc;">${p.pos}</strong></span>
+                <span class="stats-badge" title="Percentual de Acertos">${accuracy}% acerto</span>
+            </div>
+        `;
+        dashboard.appendChild(card);
+    });
+
+    renderBoard();
+}
+
+function rollDice() {
+    document.getElementById('rollBtn').disabled = true;
+    let rollAnimation = setInterval(() => {
+        document.getElementById('diceResult').innerText = Math.floor(Math.random() * 6) + 1;
+    }, 80);
+
+    setTimeout(() => {
+        clearInterval(rollAnimation);
+        const diceValue = Math.floor(Math.random() * 6) + 1;
+        document.getElementById('diceResult').innerText = `🎲 ${diceValue}`;
+        
+        if (gameMode.startsWith('NET')) {
+            sendNetState('DICE_ROLLED', { diceValue });
+        }
+
+        movePlayer(diceValue);
+    }, 800);
+}
+
+function movePlayer(steps) {
+    let p = players[currentPlayer];
+    p.pos += steps;
+
+    if (p.pos >= 90) {
+        p.pos = 90;
+        p.finished = true;
+        ranking.push(p);
+        updateDashboard();
+
+        if (checkGameFinished()) {
+            return;
+        } else {
+            alert(`🎉 ${p.name} chegou à casa 90!`);
+            nextTurn();
+            return;
+        }
+    }
+
+    updateDashboard();
+
+    const tileEl = document.getElementById(`tile-${p.pos}`);
+    if (tileEl) tileEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    setTimeout(() => {
+        handleTileAction(p.pos);
+    }, 500);
+}
+
+function handleTileAction(tileId) {
+    const tile = boardTiles.find(t => t.id === tileId);
+
+    if (tile.type === 'bonus' || tile.type === 'onus') {
+        const actionArea = document.getElementById('actionArea');
+        actionArea.innerHTML = `
+            <div class="question-title" style="color: ${tile.type==='bonus'?'#4ade80':'#f87171'}">${tile.title}</div>
+            <div class="question-text">${tile.q}</div>
+            <button class="dice-btn" id="effBtn" onclick="applySpecialEffect(${tile.effect}, '${tile.type}')">OK, Entendido</button>
+        `;
+        let p = players[currentPlayer];
+        let isMyTurn = (gameMode === 'LOCAL') || 
+                       (gameMode === 'SOLO' && !p.isBot) || 
+                       (gameMode === 'NET_HOST' && myPlayerId === p.id) || 
+                       (gameMode === 'NET_CLIENT' && myPlayerId === p.id);
+
+        if(!isMyTurn && !p.isBot) {
+            document.getElementById('effBtn').disabled = true;
+        }
+
+        if(p.isBot) {
+            setTimeout(() => applySpecialEffect(tile.effect, tile.type), 1500);
+        }
+    } else if (tile.qId) {
+        if (gameMode.startsWith('NET')) {
+            sendNetState('QUESTION_TIME', { tile });
+        }
+        startQuestionTimer(tile);
+    } else {
+        nextTurn();
+    }
+}
+
+function applySpecialEffect(effect, tileType) {
+    let p = players[currentPlayer];
+    p.pos += effect;
+    if (p.pos < 0) p.pos = 0;
+    if (p.pos >= 90) p.pos = 90;
+
+    updateDashboard();
+    
+    const tileEl = document.getElementById(`tile-${p.pos}`);
+    if (tileEl) tileEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Dinâmica de jogo: Se cair em BÔNUS ou ÔNUS, o jogador deve responder à pergunta da nova casa após o movimento
+    if (tileType === 'bonus' || tileType === 'onus') {
+        const targetTile = boardTiles.find(t => t.id === p.pos);
+        if (targetTile && targetTile.qId) {
+            if (gameMode.startsWith('NET')) {
+                sendNetState('QUESTION_TIME', { tile: targetTile });
+            }
+            startQuestionTimer(targetTile);
+            return;
+        }
+    }
+    
+    nextTurn();
+}
+
+function startQuestionTimer(tile, fromNet = false) {
+    const actionArea = document.getElementById('actionArea');
+    let timeLeft = 10;
+
+    actionArea.innerHTML = `
+        <div>
+            <div class="timer-text">Opções em: <span id="timerNum">10</span>s</div>
+            <div class="timer-bar-container">
+                <div class="timer-bar" id="timerBar"></div>
+            </div>
+            <div class="question-title">${tile.title}</div>
+            <div class="question-text">${tile.q}</div>
+            <p style="font-size: 11px; color: #94a3b8; text-align: center;">Pense na resposta! As opções surgirão ao zerar o tempo.</p>
+        </div>
+    `;
+
+    const timerBar = document.getElementById('timerBar');
+    const timerNum = document.getElementById('timerNum');
+
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        if (timerNum) timerNum.innerText = timeLeft;
+        if (timerBar) timerBar.style.width = `${(timeLeft / 10) * 100}%`;
+
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            showAnswerOptions(tile);
+        }
+    }, 1000);
+}
+
+function generateDistractors(correctAnswer) {
+    const otherAnswers = questionsData
+        .map(q => q.r)
+        .filter(r => r !== correctAnswer);
+
+    const shuffled = shuffleArray(otherAnswers);
+    return [shuffled[0], shuffled[1]];
+}
+
+function showAnswerOptions(tile) {
+    const actionArea = document.getElementById('actionArea');
+    const distractorList = generateDistractors(tile.r);
+    
+    const options = shuffleArray([
+        { text: tile.r, correct: true },
+        { text: distractorList[0], correct: false },
+        { text: distractorList[1], correct: false }
+    ]);
+
+    actionArea.innerHTML = `
+        <div>
+            <div class="question-title">${tile.title}</div>
+            <div class="question-text" style="font-size:12px; margin-bottom:8px;">${tile.q}</div>
+            <div style="font-size:12px; color:#38bdf8; margin-bottom:8px; font-weight:bold;">Escolha a resposta correta:</div>
+            <div class="options-container" id="optionsBox"></div>
+        </div>
+    `;
+
+    let p = players[currentPlayer];
+    let isMyTurn = (gameMode === 'LOCAL') || 
+                   (gameMode === 'SOLO' && !p.isBot) || 
+                   (gameMode === 'NET_HOST' && myPlayerId === p.id) || 
+                   (gameMode === 'NET_CLIENT' && myPlayerId === p.id);
+
+    const optionsBox = document.getElementById('optionsBox');
+    options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerText = opt.text;
+
+        if (!isMyTurn && !p.isBot) {
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+        } else {
+            btn.onclick = () => validateAnswer(opt.correct, tile.r);
+        }
+
+        optionsBox.appendChild(btn);
+    });
+
+    if (p.isBot) {
+        setTimeout(() => {
+            // Robô acerta com 70% de probabilidade
+            const botChoice = Math.random() < 0.7;
+            validateAnswer(botChoice, tile.r);
+        }, 2000);
+    }
+}
+
+function validateAnswer(isCorrect, correctAnswerText) {
+    let p = players[currentPlayer];
+    p.totalQuestions++;
+    
+    if (isCorrect) {
+        p.correctAnswers++;
+    } else {
+        // Dinâmica de jogo: Retorna para a casa onde o jogador estava no INÍCIO do turno
+        p.pos = p.startTurnPos;
+    }
+
+    updateDashboard();
+
+    if (gameMode.startsWith('NET')) {
+        sendNetState('ANSWER_RESULT', { isCorrect, correctAnswerText, pPos: p.pos });
+    }
+
+    showAnswerResult(isCorrect, correctAnswerText, p.pos);
+}
+
+function showAnswerResult(isCorrect, correctAnswerText, pPos) {
+    const actionArea = document.getElementById('actionArea');
+    let p = players[currentPlayer];
+
+    let isMyTurn = (gameMode === 'LOCAL') || 
+                   (gameMode === 'SOLO' && !p.isBot) || 
+                   (gameMode === 'NET_HOST' && myPlayerId === p.id) || 
+                   (gameMode === 'NET_CLIENT' && myPlayerId === p.id);
+
+    if (isCorrect) {
+        actionArea.innerHTML = `
+            <div class="status-msg status-correct">✅ RESPOSTA CORRETA!</div>
+            <p style="font-size:12px; margin: 8px 0;">Excelente! Permanece na casa ${pPos}.</p>
+            <button class="dice-btn" id="passBtn" onclick="nextTurn()">Passar a Vez ➔</button>
+        `;
+    } else {
+        actionArea.innerHTML = `
+            <div class="status-msg status-wrong">❌ RESPOSTA INCORRETA!</div>
+            <p style="font-size:12px; margin: 6px 0; color:#f87171;">Voltou para a casa do início da jogada: Casa ${pPos}</p>
+            <p style="font-size:11px; color:#94a3b8; margin-bottom:8px;"><strong>Resposta Correta:</strong> ${correctAnswerText}</p>
+            <button class="dice-btn" id="passBtn" onclick="nextTurn()">Passar a Vez ➔</button>
+        `;
+    }
+
+    if (!isMyTurn && !p.isBot) {
+        document.getElementById('passBtn').disabled = true;
+    }
+
+    if (p.isBot) {
+        setTimeout(() => nextTurn(), 1800);
+    }
+}
+
+function checkGameFinished() {
+    const activePlayers = players.filter(p => !p.finished);
+
+    if (activePlayers.length <= 1) {
+        if (activePlayers.length === 1) {
+            const lastPlayer = activePlayers[0];
+            lastPlayer.finished = true;
+            ranking.push(lastPlayer);
+        }
+        showFinalRanking();
+        return true;
+    }
+    return false;
+}
+
+function nextTurn() {
+    if (checkGameFinished()) return;
+
+    do {
+        currentPlayer = (currentPlayer + 1) % players.length;
+    } while (players[currentPlayer].finished);
+
+    updateDashboard();
+
+    if (gameMode.startsWith('NET')) {
+        sendNetState('NEXT_TURN');
+    }
+
+    startTurnUI();
+}
+
+function showFinalRanking() {
+    const actionArea = document.getElementById('actionArea');
+    document.getElementById('rollBtn').disabled = true;
+
+    let rankingHTML = `
+        <div class="ranking-card">
+            <div class="ranking-title">🏆 PÓDIO FINAL DA AUTOMAÇÃO 🏆</div>
+            <div class="ranking-list">
+    `;
+
+    ranking.forEach((p, idx) => {
+        const accuracy = p.totalQuestions > 0 ? Math.round((p.correctAnswers / p.totalQuestions) * 100) : 0;
+        const trophy = idx === 0 ? '🥇 1º Lugar' : idx === 1 ? '🥈 2º Lugar' : idx === 2 ? '🥉 3º Lugar' : '4º Lugar';
+        
+        rankingHTML += `
+            <div class="ranking-item">
+                <span style="font-weight:bold; color:#facc15;">${trophy}</span>
+                <span style="color:${p.color}; font-weight:bold;">${p.name}</span>
+                <span style="color:#94a3b8;">${accuracy}% de acerto (${p.correctAnswers}/${p.totalQuestions})</span>
+            </div>
+        `;
+    });
+
+    rankingHTML += `
+            </div>
+            <button class="restart-btn" style="width:100%;" onclick="showModeSelection()">🔄 Escolher Novo Modo</button>
+        </div>
+    `;
+
+    actionArea.innerHTML = rankingHTML;
+}
+
+// Inicializa no modo solo por padrao
+setupSoloGame();
+</script>
+
+</body>
+</html>
