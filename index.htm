@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Portal de jogos didáticos de Gestão da Qualidade, Lean, Gestão Empresarial e Balanceamento de Operações.">
+<title>Portal de Jogos Técnicos | Gestão Industrial</title>
+<style>
+  :root {
+    --navy:#12304a; --blue:#1769aa; --cyan:#18a6a6; --gold:#f2b544;
+    --bg:#f2f5f8; --ink:#203040; --muted:#5d6b78; --white:#fff;
+    --line:#dce4eb; --shadow:0 8px 24px rgba(18,48,74,.09);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Arial,Helvetica,sans-serif; background:var(--bg); color:var(--ink); line-height:1.55; }
+  .hero { background:linear-gradient(130deg,#102a43,#1769aa); color:white; padding:44px 22px 38px; }
+  .hero-inner, main, footer { width:min(1180px,calc(100% - 32px)); margin:auto; }
+  .eyebrow { text-transform:uppercase; letter-spacing:.13em; font-size:.78rem; font-weight:700; color:#aee9e4; }
+  h1 { margin:8px 0 10px; font-size:clamp(1.8rem,4vw,3rem); line-height:1.1; }
+  .hero p { max-width:780px; margin:0; color:#e8f2fa; font-size:1.04rem; }
+  .hero-note { margin-top:22px; display:inline-block; padding:8px 12px; border:1px solid #ffffff55; border-radius:9px; font-size:.9rem; }
+  main { padding:28px 0 46px; }
+  .toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:12px; justify-content:space-between; margin-bottom:22px; }
+  .toolbar p { margin:0; color:var(--muted); }
+  .search { width:min(100%,360px); padding:12px 14px; border:1px solid #cbd6e0; border-radius:10px; font-size:1rem; background:white; }
+  .section-title { margin:30px 0 14px; display:flex; align-items:center; gap:10px; color:var(--navy); font-size:1.3rem; }
+  .section-title:before { content:""; width:5px; height:25px; background:var(--cyan); border-radius:4px; }
+  .grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+  .card { display:flex; flex-direction:column; background:var(--white); border:1px solid var(--line); border-radius:14px; padding:20px; box-shadow:var(--shadow); min-height:250px; }
+  .card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .icon { font-size:1.65rem; line-height:1; }
+  .tag { background:#e7f5f4; color:#126e6b; border-radius:999px; padding:4px 9px; font-size:.72rem; font-weight:700; white-space:nowrap; }
+  .card h3 { margin:13px 0 8px; color:var(--navy); font-size:1.08rem; line-height:1.3; }
+  .card p { margin:0 0 15px; color:var(--muted); font-size:.94rem; }
+  .features { margin:0 0 18px; padding-left:18px; color:#34485a; font-size:.87rem; }
+  .features li { margin:3px 0; }
+  .actions { margin-top:auto; display:flex; flex-wrap:wrap; gap:8px; }
+  .btn { display:inline-flex; justify-content:center; align-items:center; text-align:center; text-decoration:none; border-radius:9px; padding:10px 13px; font-weight:700; font-size:.9rem; transition:transform .15s,background .15s; }
+  .btn:hover { transform:translateY(-1px); }
+  .btn-primary { background:var(--blue); color:white; }
+  .btn-primary:hover { background:#10578f; }
+  .btn-secondary { color:var(--navy); background:#edf2f6; border:1px solid #d8e1e8; }
+  .tip { background:#fff8e8; border:1px solid #f0d79b; border-radius:12px; padding:15px 18px; color:#624b18; margin-top:26px; }
+  footer { color:var(--muted); font-size:.85rem; padding:0 0 30px; }
+  .empty { display:none; background:white; padding:24px; border-radius:12px; color:var(--muted); }
+  @media(max-width:900px) { .grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  @media(max-width:600px) { .grid { grid-template-columns:1fr; } .hero { padding:34px 0; } .card { min-height:0; } .toolbar { align-items:stretch; } .search { width:100%; } }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <div class="eyebrow">Portal de aprendizagem técnica</div>
+    <h1>Jogos de Gestão Industrial</h1>
+    <p>Um catálogo de atividades interativas para explorar Gestão da Qualidade, ferramentas de melhoria, Lean Manufacturing, gestão empresarial e balanceamento de operações. Escolha um jogo para iniciar.</p>
+    <div class="hero-note">Uso educacional • Atividades individuais e em equipe • Abra os arquivos na mesma pasta deste portal</div>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <p><strong>12 jogos e simuladores</strong> — use a busca para localizar uma atividade.</p>
+    <input id="search" class="search" type="search" placeholder="Buscar jogo, tema ou ferramenta..." aria-label="Buscar jogo">
+  </div>
+
+  <h2 class="section-title">Gestão da Qualidade</h2>
+  <section class="grid" aria-label="Jogos de Gestão da Qualidade">
+    <article class="card" data-search="qual drop desafio gestão qualidade associação ferramentas soluções dificuldade normal avançado">
+      <div class="card-top"><span class="icon">🎯</span><span class="tag">Desafio / associação</span></div>
+      <h3>QUAL-DROP — Desafio de Gestão da Qualidade</h3>
+      <p>Relaciona desafios de fabricação a ferramentas ou soluções da qualidade. Indicado para aplicar conceitos a situações industriais e discutir a escolha de uma ferramenta adequada.</p>
+      <ul class="features"><li>Desafios organizados em módulos</li><li>Níveis Normal e Avançado</li><li>Análise técnica após resposta correta</li></ul>
+      <div class="actions"><a class="btn btn-primary" href="QUAL-DROP_Desafio_Gestao_Qualidade.html">Iniciar jogo</a></div>
+    </article>
+    <article class="card" data-search="qual drop rede multiplayer peerjs pontuação tempo gestão qualidade">
+      <div class="card-top"><span class="icon">🌐</span><span class="tag">Multiplayer</span></div>
+      <h3>QUAL-DROP — Desafio em Rede</h3>
+      <p>Versão voltada à competição entre participantes conectados, com pontuação e tempo. A experiência em rede depende de conexão e do funcionamento do serviço de comunicação utilizado.</p>
+      <ul class="features"><li>Modo multiplayer</li><li>Placar e cronômetro</li><li>Requer teste da conexão entre jogadores</li></ul>
+      <div class="actions"><a class="btn btn-primary" href="QUAL-DROP_Desafio_Gestao_Qualidade_Rede.html">Iniciar jogo</a></div>
+    </article>
+    <article class="card" data-search="qual drop v01 desafio cronometrado pontos páginas soluções qualidade">
+      <div class="card-top"><span class="icon">⏱️</span><span class="tag">Desafio cronometrado</span></div>
+      <h3>QUAL-DROP — Versão V01</h3>
+      <p>Atividade de associação entre desafios de qualidade e possíveis soluções, com pontuação e organização por páginas. Útil para revisão rápida e prática individual ou em grupo.</p>
+      <ul class="features"><li>Questões por etapas</li><li>Pontuação e tempo</li><li>Revisão de ferramentas da qualidade</li></ul>
+      <div class="actions"><a class="btn btn-primary" href="QUAL-DROP_Desafio_Gestao_Qualidade_V01.html">Iniciar jogo</a></div>
+    </article>
+    <article class="card" data-search="jogo memória gestão qualidade 20 pares solo multiplayer pontuação">
+      <div class="card-top"><span class="icon">🧠</span><span class="tag">Memória</span></div>
+      <h3>Jogo da Memória — Gestão da Qualidade</h3>
+      <p>Jogo de correspondência entre cartas para reforçar a memorização de conceitos e suas relações. Pode ser usado em revisão e competição amigável.</p>
+      <ul class="features"><li>20 pares distribuídos em módulos</li><li>Modo solo e multiplayer</li><li>Pontuação, tempo e tutorial</li></ul>
+      <div class="actions"><a class="btn btn-primary" href="QUAL-Jogo_Memoria-Gestao_Qualidade_V3.html">Iniciar jogo</a></div>
+    </article>
+    <article class="card" data-search="acha o par sistema da qualidade 5w2h lean fmea rpn jit kanban cep imr">
+      <div class="card-top"><span class="icon">🔎</span><span class="tag">Conceitos / definições</span></div>
+      <h3>Acha o Par — Sistema da Qualidade</h3>
+      <p>Propõe relacionar termos e definições de ferramentas e conceitos usados na qualidade e na produção, como 5W2H, Lean, FMEA/RPN, JIT, Kanban e CEP.</p>
+      <ul class="features"><li>Associação de conceito e definição</li><li>Revisão de ferramentas e indicadores</li><li>Bom para aquecimento ou fechamento de aula</li></ul>
+      <div class="actions"><a class="btn btn-primary" href="QUAL-Acha o par Sistema da qualidade.html">Iniciar jogo</a></div>
+    </article>
+    <article class="card" data-search="mestres qualidade desafio pânico auditoria 52 casas 6m pdca six sigma anova">
+      <div class="card-top"><span class="icon">🏆</span><span class="tag">Tabuleiro / auditoria</span></div>
+      <h3>Mestres da Qualidade — Desafio Pânico</h3>
+      <p>Jogo de tabuleiro com desafios ligados à auditoria, não conformidades e ferramentas de análise. Favorece discussão de decisões e aplicação de conceitos em equipe.</p>
+      <ul class="features"><li>Tabuleiro com 52 casas</li><li>De 2 a 4 jogadores e 4 níveis</li><li>Temas: 6M, PDCA, Six Sigma e ANOVA</li></ul>
+      <div class="actions"><a class="btn btn-primary" href="QUAL-GT-Mestres_qualidade-Desafio_Panico.html">Iniciar jogo</a></div>
+    </article>
+  </section>
+
+  <h2 class="section-title">Lean Manufacturing e eliminação de desperdícios</h2>
+  <section class="grid" aria-label="Jogos Lean">
+    <article class="card" data-search="lean classificação agrega necessária desperdício local tabuleiro 50 casas valor">
+      <div class="card-top"><span class="icon">♻️</span><span class="tag">Lean / classificação</span></div>
+      <h3>Lean — Agrega, Necessário ou Desperdício</h3>
+      <p>Tabuleiro para classificar atividades conforme sua contribuição para o valor e sua necessidade operacional. Ajuda a reconhecer desperdícios e justificar decisões de melhoria.</p>
+      <ul class="features"><li>50 casas e 2 a 4 jogadores</li><li>Tempo para responder às perguntas</li><li>Casas de bônus e penalidade</li></ul>
+      <div class="actions"><a class="btn btn-primary" href="QUAL-LEAN-Classificacao_Agrega_Necessaria_Desperdicio_local.html">Iniciar jogo</a></div>
+    </article>
+    <article class="card" data-search="lean nomes personalizados regras anticonflito vsm jidoka takt time pull nva">
+      <div class="card-top"><span class="icon">🧩</span><span class="tag">Lean / tabuleiro</span></div>
+      <h3>Lean — Desafio com Nomes Personalizados</h3>
+      <p>Jogo de tabuleiro com nomes personalizados e posições de bônus ou penalidade organizadas para evitar conflitos. Trabalha conceitos de fluxo e melhoria contínua.</p>
+      <ul class="features"><li>50 casas e cronômetro por pergunta</li><li>VSM, Jidoka e Takt Time</li><li>Sistemas puxados e atividades NVA-N</li></ul>
+      <div class="actions"><a class="btn btn-primary" href="QUAL-LEAN-Nomes_Personalizados_Regras_Anticonflito.html">Iniciar jogo</a></div>
+    </article>
+  </section>
+
+  <h2 class="section-title">Gestão empresarial e operações</h2>
+  <section class="grid" aria-label="Jogos de Gestão Empresarial e Operações">
+    <article class="card" data-search="gestão empresarial rede multiplayer peerjs web rtc finanças organização pcp revolução industrial">
+      <div class="card-top"><span class="icon">🏭</span><span class="tag">Gestão / multiplayer</span></div>
+      <h3>GT — Gestão Empresarial em Rede</h3>
+      <p>Jogo de tabuleiro com desafios de gestão empresarial e produção. Pode apoiar a integração de temas como finanças, estrutura organizacional e Planejamento e Controle da Produção (PCP).</p>
+      <ul class="features"><li>De 2 a 4 jogadores</li><li>Conexão multiplayer via tecnologia web</li><li>Inclui guia de estudo e níveis de dificuldade</li></ul>
+      <div class="actions"><a class="btn btn-primary" href="QUAL-GT-Gestão_Empresarial-rede.html">Iniciar jogo</a></div>
+    </article>
+    <article class="card" data-search="gbo desafio balanceamento operações operadores júnior pleno sênior orçamento ausências falhas mecânicas">
+      <div class="card-top"><span class="icon">⚙️</span><span class="tag">Simulador avançado</span></div>
+      <h3>GBO — Desafio de Balanceamento</h3>
+      <p>Simulador para explorar decisões de balanceamento de operações considerando perfis de operadores, orçamento e ocorrências que afetam a produção.</p>
+      <ul class="features"><li>Perfis de operador: júnior, pleno e sênior</li><li>Orçamento por fase</li><li>Ocorrências como ausência e falha mecânica</li></ul>
+      <div class="actions"><a class="btn btn-primary" href="QUAL-GBO_Desafio.html">Iniciar simulador</a></div>
+    </article>
+    <article class="card" data-search="gbo responsivo simulador balanceamento linha 12 postos gráfico svg tempo ideal tolerância">
+      <div class="card-top"><span class="icon">📊</span><span class="tag">Simulador visual</span></div>
+      <h3>GBO — Balanceamento Responsivo</h3>
+      <p>Simulador visual de balanceamento de linha, com alocação de operadores e gráfico de carga por posto. Útil para discutir distribuição de trabalho e diferenças em relação ao tempo ideal.</p>
+      <ul class="features"><li>12 postos de trabalho</li><li>Gráfico dinâmico de carga</li><li>Interface adaptável a diferentes telas</li></ul>
+      <div class="actions"><a class="btn btn-primary" href="QUAL-GBO_v1.0_responsivo.html">Iniciar simulador</a></div>
+    </article>
+  </section>
+
+  <div id="empty" class="empty">Nenhum jogo encontrado com esse termo. Tente buscar por “Lean”, “qualidade”, “GBO” ou “gestão”.</div>
+  <div class="tip"><strong>Importante:</strong> mantenha este arquivo <code>index.htm</code> na mesma pasta dos 11 arquivos de jogos indicados nos atalhos. Os botões usam os nomes de arquivo definidos nos links; se algum arquivo for renomeado, atualize o respectivo <code>href</code>. Os modos em rede precisam ser testados com os dispositivos e a conexão que serão utilizados em aula.</div>
+</main>
+
+<footer>Portal didático de Gestão Industrial • Arquivo HTML local, sem necessidade de servidor para navegar entre os jogos.</footer>
+<script>
+  const search = document.getElementById('search');
+  const cards = [...document.querySelectorAll('.card')];
+  const sections = [...document.querySelectorAll('main > .grid')];
+  const empty = document.getElementById('empty');
+  search.addEventListener('input', () => {
+    const term = search.value.trim().toLocaleLowerCase('pt-BR');
+    let visible = 0;
+    cards.forEach(card => {
+      const show = card.innerText.toLocaleLowerCase('pt-BR').includes(term) ||
+                   (card.dataset.search || '').toLocaleLowerCase('pt-BR').includes(term);
+      card.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    sections.forEach(section => {
+      section.style.display = [...section.querySelectorAll('.card')].some(c => c.style.display !== 'none') ? '' : 'none';
+    });
+    document.querySelectorAll('.section-title').forEach(title => {
+      const next = title.nextElementSibling;
+      title.style.display = next && next.style.display === 'none' ? 'none' : '';
+    });
+    empty.style.display = visible ? 'none' : 'block';
+  });
+</script>
+</body>
+</html>
